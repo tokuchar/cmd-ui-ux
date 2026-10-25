@@ -1,0 +1,48 @@
+@import 'tailwindcss';
+@import './styles/tokens.css';
+@import './styles/animations.css';
+
+/* Tryb ciemny przełączany klasą .dark na <html> (ThemeService). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Mapowanie tokenów (styles/tokens.css) na klasy Tailwinda.
+ * `inline` = klasy odwołują się do var(--…), więc zmiana motywu działa w runtime
+ * bez wariantów `dark:`. Nowy kolor: dodaj token w tokens.css + linię tutaj.
+ */
+@theme inline {
+  --font-sans: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-text: var(--brand-text);
+  --color-on-brand: var(--on-brand);
+
+  --color-app-bg: var(--app-bg);
+  --color-app-surface: var(--app-surface);
+  --color-app-popover: var(--app-popover);
+  --color-app-subtle: var(--app-subtle);
+  --color-app-hover: var(--app-hover);
+  --color-app-header: var(--app-header);
+  --color-app-track: var(--app-track);
+  --color-app-text: var(--app-text);
+  --color-app-muted: var(--app-muted);
+  --color-app-line: var(--app-line);
+  --color-app-empty: var(--app-empty);
+  --color-app-empty-dim: var(--app-empty-dim);
+  --color-app-kbd: var(--app-kbd);
+  --color-backdrop: var(--backdrop);
+
+  --color-success: var(--success);
+  --color-success-strong: var(--success-strong);
+  --color-success-strong-hover: var(--success-strong-hover);
+  --color-success-text: var(--success-text);
+  --color-success-soft: var(--success-soft);
+  --color-success-line: var(--success-line);
+  --color-danger: var(--danger);
+  --color-danger-text: var(--danger-text);
+  --color-danger-ring: var(--danger-ring);
+  --color-danger-soft: var(--danger-soft);
+  --color-warning: var(--warning);
+}

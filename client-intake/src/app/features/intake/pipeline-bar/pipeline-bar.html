@@ -1,0 +1,42 @@
+@for (g of engine.pipeline(); track g.id; let first = $first; let last = $last) {
+  <button
+    type="button"
+    (click)="click(g.id)"
+    [title]="g.label + ': ' + g.pct + '%'"
+    class="flex flex-col gap-1.5 bg-transparent transition-all flex-1 min-w-0 text-left"
+  >
+    <div
+      class="relative h-2.5 bg-app-line overflow-hidden"
+      role="progressbar"
+      [attr.aria-label]="g.label"
+      aria-valuemin="0"
+      aria-valuemax="100"
+      [attr.aria-valuenow]="g.pct"
+      [style.border-radius]="(first ? '6px' : '2px') + ' ' + (last ? '6px' : '2px') + ' ' + (last ? '6px' : '2px') + ' ' + (first ? '6px' : '2px')"
+      [style.box-shadow]="engine.s.selectedGroup() === g.id ? '0 0 0 2px ' + g.color : null"
+    >
+      <div
+        class="absolute inset-y-0 left-0 transition-[width] duration-[350ms] ease-out"
+        [style.width.%]="g.pct"
+        [style.background]="g.color"
+      ></div>
+    </div>
+    <div class="flex items-baseline justify-between gap-1">
+      <span class="text-[11px] font-semibold leading-tight truncate" [class]="g.pct > 0 ? 'text-app-text' : 'text-app-muted'">
+        {{ g.label }}
+      </span>
+      @if (g.issues) {
+        <span class="text-danger text-[12px] leading-none shrink-0" [title]="g.issues + ' do poprawy'">✗</span>
+      } @else if (g.pct >= 100) {
+        <span class="text-[12px] leading-none shrink-0" [style.color]="g.color">✓</span>
+      }
+    </div>
+    <span
+      class="text-[10px] font-mono -mt-0.5"
+      [class]="g.issues ? 'text-danger' : g.pct >= 100 ? '' : 'text-app-muted'"
+      [style.color]="!g.issues && g.pct >= 100 ? g.color : null"
+    >
+      {{ g.status }}
+    </span>
+  </button>
+}

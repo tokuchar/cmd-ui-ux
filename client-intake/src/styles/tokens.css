@@ -1,0 +1,119 @@
+/*
+ * ============================================================================
+ *  DESIGN TOKENS — JEDYNE miejsce, w którym definiujemy kolory aplikacji.
+ * ============================================================================
+ *
+ *  Zasady:
+ *  - Komponenty NIE używają surowych kolorów (hex, rgb, bg-gray-100, text-rose-500…).
+ *    Używają wyłącznie klas semantycznych wygenerowanych z tych tokenów
+ *    (np. bg-app-surface, text-app-muted, text-danger, bg-brand) — patrz styles.css.
+ *  - Tryb ciemny = nadpisanie tych samych zmiennych w `.dark`. Komponenty nie
+ *    potrzebują wariantów `dark:` dla kolorów.
+ *  - Przemalowanie pod nową markę = zmiana wartości poniżej (docs/THEMING.md).
+ *
+ *  Wartości 1:1 z mockupu (mockup/zak_adanie_klienta.html, tailwind.config + klasy).
+ */
+
+:root {
+  /* --- Marka ------------------------------------------------------------- */
+  --brand: #5b5bd6;            /* tło przycisku głównego, pasek postępu, ring focus */
+  --brand-hover: #4f4fc9;
+  --brand-text: #5b5bd6;       /* tekst/ikony w kolorze marki (prompt ›, nagłówki grup) */
+  --on-brand: #ffffff;         /* tekst na tle marki */
+
+  /* --- Powierzchnie i tekst ---------------------------------------------- */
+  --app-bg: #fbfbf9;           /* tło strony */
+  --app-surface: #ffffff;      /* karty, command line, sheet */
+  --app-popover: #ffffff;      /* dropdowny (podpowiedzi, opcje) */
+  --app-subtle: rgb(249 250 251 / 0.5); /* nagłówki kart */
+  --app-hover: #f3f4f6;        /* hover przycisków i wierszy list */
+  --app-header: rgb(255 255 255 / 0.6); /* pasek pipeline (z blur) */
+  --app-track: #e5e7eb;        /* tło cienkiego paska postępu */
+  --app-text: #26262b;
+  --app-muted: #6b6b75;        /* ~5.3:1 na białym — WCAG AA dla małego tekstu */
+  --app-line: #ecece8;
+  --app-empty: #6b7280;        /* „Nie podano" — ~5:1 na białym (AA) */
+  --app-empty-dim: #b4b8c0;    /* „—" przy pustej wartości */
+  --app-kbd: #f3f4f6;          /* tło <kbd> */
+  --backdrop: rgb(0 0 0 / 0.3);
+  --row-hover: rgb(91 91 214 / 0.08);     /* wiersz edytowalny w „Dane klienta" */
+  --row-highlight: rgb(91 91 214 / 0.1);  /* podświetlenie grupy po kliknięciu w pipeline */
+  --bg-image-opacity: 0.045;              /* zdjęcie w tle: subtelne w trybie jasnym (wypełnia pustkę) */
+  --bg-fx: #5b5bd6;                        /* animowane tło „digital rain" — odcień marki */
+  --bg-fx-opacity: 0.11;                   /* krycie całości efektu */
+
+  /* --- Statusy ------------------------------------------------------------ */
+  --success: #10b981;          /* ✓ */
+  --success-strong: #059669;   /* przycisk „Zatwierdź wszystkie" */
+  --success-strong-hover: #047857;
+  --success-text: #059669;
+  --success-soft: rgb(236 253 245 / 0.5);
+  --success-line: #6ee7b7;
+  --danger: #f43f5e;           /* ✗ */
+  --danger-text: #e11d48;      /* tekst w polu z błędem */
+  --danger-ring: #fb7185;
+  --danger-soft: #fff1f2;
+  --warning: #f59e0b;          /* ⚠ */
+
+  /* --- Sekcje pipeline (kolejność = kolejność grup w flow.config.ts) ------ */
+  --group-1: #5b5bd6;          /* Dane podstawowe */
+  --group-2: #0d9488;          /* Adresy */
+  --group-3: #d97706;          /* Osoby polecające */
+  --group-4: #db2777;          /* Dane dodatkowe (demo) */
+  --group-5: #2563eb;          /* zapas dla migrowanej aplikacji */
+  --group-6: #7c3aed;
+
+  /* --- Scrollbar ---------------------------------------------------------- */
+  --scrollbar: rgb(138 138 148 / 0.3);
+  --scrollbar-hover: rgb(138 138 148 / 0.5);
+
+  color-scheme: light;
+}
+
+.dark {
+  --brand: #5b5bd6;
+  --brand-hover: #4f4fc9;
+  --brand-text: #7c7cf0;
+  --on-brand: #ffffff;
+
+  --app-bg: #141418;
+  --app-surface: #1c1c22;
+  --app-popover: #1e1e24;
+  --app-subtle: rgb(31 41 55 / 0.2);
+  --app-hover: #1f2937;
+  --app-header: rgb(28 28 34 / 0.4);
+  --app-track: #1f2937;
+  --app-text: #ececea;
+  --app-muted: #8a8a96;        /* ~4.9:1 na #1c1c22 — WCAG AA dla małego tekstu */
+  --app-line: #26262c;
+  --app-empty: #9ca3af;
+  --app-empty-dim: #4b5563;
+  --app-kbd: #1f2937;
+  --backdrop: rgb(0 0 0 / 0.3);
+  --row-hover: rgb(139 139 245 / 0.12);
+  --row-highlight: rgb(139 139 245 / 0.14);
+  --bg-image-opacity: 0.06;
+  --bg-fx: #7c7cf0;
+  --bg-fx-opacity: 0.16;
+
+  --success: #10b981;
+  --success-strong: #059669;
+  --success-strong-hover: #047857;
+  --success-text: #34d399;
+  --success-soft: rgb(2 44 34 / 0.25);
+  --success-line: #065f46;
+  --danger: #f43f5e;
+  --danger-text: #fb7185;
+  --danger-ring: #fb7185;
+  --danger-soft: rgb(76 5 25 / 0.4);
+  --warning: #f59e0b;
+
+  --group-1: #8b8bf5;
+  --group-2: #2dd4bf;
+  --group-3: #fbbf24;
+  --group-4: #f472b6;
+  --group-5: #60a5fa;
+  --group-6: #a78bfa;
+
+  color-scheme: dark;
+}

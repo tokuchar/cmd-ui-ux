@@ -1,0 +1,42 @@
+/* Animacje i drobne style globalne — 1:1 z <style> mockupu. Kolory tylko z tokens.css. */
+
+.fade-in-up {
+  animation: fadeInUp 180ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.pop-icon {
+  animation: popIcon 200ms cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+@keyframes popIcon {
+  0% { transform: scale(0.8); }
+  50% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+
+.shake {
+  animation: shake 300ms cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+@keyframes shake {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-4px); }
+  40%, 60% { transform: translateX(4px); }
+}
+
+/* Wiersze w „Dane klienta" — dwuklik edytuje w command line */
+.editable-row {
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background-color 0.15s ease;
+  user-select: none;
+}
+.editable-row:hover { background-color: var(--row-hover); }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }

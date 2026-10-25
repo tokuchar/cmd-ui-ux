@@ -1,0 +1,71 @@
+@if (view(); as v) {
+  <div class="bg-app-surface border border-app-line rounded-2xl shadow-sm overflow-hidden transition-all fade-in-up">
+    <div class="p-3 border-b border-app-line bg-app-subtle flex items-center justify-between gap-2">
+      <h2 class="text-xs font-bold uppercase tracking-wider text-app-muted flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-brand inline-block"></span>
+        {{ v.title }}
+        <span class="font-mono normal-case font-normal text-app-muted/80">{{ v.summary }}</span>
+      </h2>
+    </div>
+    <div class="p-2.5 space-y-2 text-xs">
+      @for (r of v.rows; track r.id) {
+        @if (r.excluded) {
+          <div class="rounded-lg border border-app-line/60 p-2 flex items-center justify-between gap-2 opacity-40">
+            <span class="font-semibold truncate line-through">
+              <span class="font-mono text-app-muted mr-1">{{ r.no }}.</span>{{ r.name }}
+            </span>
+            @if (v.phase === 'select') {
+              <button
+                type="button"
+                (click)="engine.toggleExclude(v.step, r.id)"
+                title="Przywróć (+{{ r.no }})"
+                class="px-1.5 py-1 text-[11px] rounded-md border border-app-line hover:bg-app-hover"
+              >
+                ↩
+              </button>
+            } @else {
+              <span class="text-[11px] text-app-muted">pominięta</span>
+            }
+          </div>
+        } @else {
+          <div
+            class="rounded-lg border p-2 flex items-center justify-between gap-2 transition-colors"
+            [class]="r.current ? 'border-brand ring-1 ring-brand' : r.done ? 'border-success-line bg-success-soft' : 'border-app-line'"
+          >
+            <div class="min-w-0">
+              <div class="font-semibold truncate">
+                <span class="font-mono text-app-muted mr-1">{{ r.no }}.</span>{{ r.name }}
+                @if (r.detail) {
+                  <span class="font-normal text-app-muted"> · {{ r.detail }}</span>
+                }
+              </div>
+              @if (r.answers) {
+                <div class="font-mono text-[11px] text-app-muted truncate">{{ r.answers }}</div>
+              }
+            </div>
+            <div class="flex items-center gap-1 shrink-0">
+              @if (r.done) {
+                <span class="text-success-text text-[11px] font-semibold">✓</span>
+              }
+              @if (r.current) {
+                <span class="text-brand-text text-[11px] font-semibold">● teraz</span>
+              }
+              @if (v.phase === 'select') {
+                <button
+                  type="button"
+                  (click)="engine.toggleExclude(v.step, r.id)"
+                  title="Wyszarz (-{{ r.no }})"
+                  class="px-1.5 py-1 text-[11px] rounded-md text-danger hover:bg-danger-soft"
+                >
+                  ✕
+                </button>
+              }
+            </div>
+          </div>
+        }
+      } @empty {
+        <div class="text-app-muted italic p-2">Brak osób dla tego kodu — wpisz inny kod powyżej.</div>
+      }
+    </div>
+  </div>
+}

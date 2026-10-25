@@ -1,0 +1,157 @@
+<!-- Step Input Block -->
+<div
+  class="relative bg-app-surface border border-app-line rounded-xl p-3 sm:p-4 shadow-sm transition-all focus-within:ring-2 focus-within:ring-brand focus-within:border-transparent"
+  [class.ring-2]="s.inputError()"
+  [class.ring-danger-ring]="s.inputError()"
+  [class.border-transparent]="s.inputError()"
+  [class.shake]="shaking()"
+>
+  <label
+    for="cmdInput"
+    class="text-[11px] font-semibold text-app-muted uppercase tracking-wider mb-2 flex justify-between items-center gap-2"
+  >
+    <span>{{ prompt().label }}</span>
+    <span class="flex items-center gap-2 shrink-0">
+      <button
+        type="button"
+        (click)="toggleMode(); $event.stopPropagation()"
+        [attr.aria-pressed]="isCommand()"
+        [title]="isCommand() ? 'Wróć do formularza (⌘F)' : 'Tryb komend (⌘K)'"
+        class="text-[10px] font-normal font-mono normal-case opacity-70 hover:opacity-100 flex items-center gap-1 px-1 py-0.5 rounded hover:bg-app-hover transition-all"
+      >
+        <kbd class="px-1 py-0.5 rounded bg-app-kbd border border-app-line">{{ isCommand() ? '⌘F' : '⌘K' }}</kbd>
+        {{ isCommand() ? 'formularz' : 'komendy' }}
+      </button>
+      <span class="text-[10px] font-normal opacity-70 font-mono">{{ prompt().counter }}</span>
+    </span>
+  </label>
+
+  <div class="relative flex items-center gap-2">
+    <span class="text-brand-text text-xl font-bold font-mono select-none">›</span>
+    <div class="relative flex-1 min-w-0">
+      <div
+        aria-hidden="true"
+        class="pointer-events-none absolute inset-0 font-mono text-base sm:text-lg whitespace-pre overflow-hidden text-app-muted/50"
+      ><span class="invisible">{{ s.draft() }}</span>{{ ghost() }}</div>
+      <input
+        #input
+        id="cmdInput"
+        type="text"
+        autocomplete="off"
+        spellcheck="false"
+        role="combobox"
+        aria-autocomplete="list"
+        [attr.aria-expanded]="dropdownOpen()"
+        [attr.aria-controls]="listboxId()"
+        [attr.aria-activedescendant]="activeDescendant()"
+        [attr.aria-invalid]="s.inputError() ? 'true' : null"
+        [placeholder]="prompt().placeholder"
+        [disabled]="prompt().disabled"
+        (input)="onInput(input.value)"
+        (keydown)="onKeydown($event)"
+        class="relative w-full bg-transparent text-base sm:text-lg font-mono focus:outline-none placeholder:text-app-muted disabled:cursor-not-allowed"
+        [class.text-danger-text]="s.inputError()"
+        [class.text-app-text]="!s.inputError()"
+      />
+    </div>
+    <div class="flex items-center gap-2 shrink-0">
+      @if (prompt().showBack && !isCommand()) {
+        <button
+          type="button"
+          (click)="back()"
+          class="px-3 py-1.5 border border-app-line text-app-muted hover:text-app-text hover:bg-app-hover text-xs font-medium rounded-md transition-all"
+        >
+          ‹ Wstecz
+        </button>
+      }
+      <button
+        type="button"
+        (click)="submit()"
+        [disabled]="prompt().disabled"
+        class="px-3 py-1.5 bg-brand hover:bg-brand-hover text-on-brand text-xs font-medium rounded-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {{ prompt().primary }}
+      </button>
+      @if (prompt().showApprove) {
+        <button
+          type="button"
+          (click)="approve()"
+          title="Zatwierdź wszystkie (⌘Enter)"
+          class="px-3 py-1.5 bg-success-strong hover:bg-success-strong-hover text-on-brand text-xs font-medium rounded-md transition-all"
+        >
+          ✓ Zatwierdź wszystkie
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Command suggestions (command mode only) -->
+  @if (suggestions().length) {
+    <div
+      id="cmd-suggestions"
+      role="listbox"
+      aria-label="Podpowiedzi komend"
+      class="absolute left-0 right-0 top-full mt-2 bg-app-popover border border-app-line rounded-xl shadow-xl z-40 max-h-60 overflow-y-auto divide-y divide-app-line/50"
+    >
+      @for (c of suggestions(); track c.cmd; let i = $index) {
+        <div
+          [id]="'cmd-sugg-' + i"
+          role="option"
+          [attr.aria-selected]="i === suggestIndex()"
+          (mousedown)="$event.preventDefault()"
+          (click)="runSuggestion(c.cmd)"
+          class="p-2.5 cursor-pointer flex justify-between items-center gap-3 text-xs font-mono transition-colors hover:bg-app-hover"
+          [class.bg-app-hover]="i === suggestIndex()"
+          [attr.data-active]="i === suggestIndex() ? '' : null"
+        >
+          <span class="font-bold text-brand-text">{{ c.cmd }}</span>
+          <span class="text-[11px] text-app-muted truncate">{{ c.desc }}</span>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Selectable options dropdown (rozwija się od razu dla pól wyboru) -->
+  @if (options().length) {
+    <div
+      id="cmd-options"
+      role="listbox"
+      [attr.aria-label]="prompt().label"
+      class="absolute left-0 right-0 top-full mt-2 bg-app-popover border border-app-line rounded-xl shadow-xl z-40 max-h-60 overflow-y-auto divide-y divide-app-line/50"
+    >
+      @for (row of options(); track row.entry.value; let i = $index) {
+        <div
+          [id]="'cmd-opt-' + i"
+          role="option"
+          [attr.aria-selected]="i === activeOption()"
+          (mousedown)="$event.preventDefault()"
+          (click)="pickOption(row.entry)"
+          class="p-2.5 cursor-pointer flex justify-between items-center gap-3 text-sm font-mono transition-colors"
+          [class]="i === activeOption() ? 'bg-brand/10' : 'hover:bg-app-hover'"
+          [attr.data-active]="i === activeOption() ? '' : null"
+        >
+          <span class="flex items-center gap-2">
+            <span class="w-3 inline-block" [class.opacity-0]="i !== activeOption()">
+              <span class="text-brand-text font-bold">✓</span>
+            </span>
+            {{ row.entry.label }}
+          </span>
+          @if (row.first) {
+            <span class="text-[10px] text-app-muted">najbardziej prawdopodobne</span>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>
+
+<!-- Result / Feedback Box -->
+<div
+  aria-live="polite"
+  class="bg-app-surface border border-app-line rounded-xl p-3.5 shadow-sm min-h-[60px] flex items-center transition-all"
+>
+  <div class="text-xs sm:text-sm font-mono text-app-text flex items-start gap-2">
+    <span class="font-bold text-base select-none" [class]="echoIcon().cls">{{ echoIcon().icon }}</span>
+    <span [innerHTML]="s.echo().html"></span>
+  </div>
+</div>
