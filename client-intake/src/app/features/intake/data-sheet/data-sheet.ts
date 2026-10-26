@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, effect, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { IntakeEngine } from '../../../core/engine/intake-engine';
 
-/** Szuflada „Dane klienta" (wyjeżdża z dołu). Dwuklik w wiersz → edycja w command line. */
+/** Szuflada „Dane podstawowe" (wyjeżdża z dołu). Dwuklik w wiersz → edycja w command line. */
 @Component({
   selector: 'app-data-sheet',
   templateUrl: './data-sheet.html',

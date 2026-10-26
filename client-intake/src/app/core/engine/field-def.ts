@@ -36,8 +36,11 @@ export interface FieldDef<M = any> {
   dictionary?: string;
   /** Opcje inline (gdy nie ma słownika). Kolejność = prawdopodobieństwo, pierwsza = domyślna. */
   options?: DictEntry[];
-  /** select: pozwala wpisać wartość spoza listy. */
+  /** select/multiselect: pozwala wpisać wartość spoza listy. */
   allowCustom?: boolean;
+  /** scale/number: zakres wartości (np. skala bólu 0–10). */
+  min?: number;
+  max?: number;
   /**
    * select/boolean: gdy pole puste i brak podpowiedzi, wstaw pierwszą (najbardziej
    * prawdopodobną) opcję. Domyślnie true — jak w mockupie. Wyłącz dla długich słowników.
@@ -91,6 +94,9 @@ export type FieldType =
   | 'date'
   | 'number'
   | 'select'
+  | 'multiselect'
+  | 'scale'
+  | 'lift'
   | 'boolean';
 
 /** Pozycja słownika. `value` trafia do modelu/API, `label` widzi operator. */

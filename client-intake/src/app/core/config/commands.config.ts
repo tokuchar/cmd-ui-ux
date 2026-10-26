@@ -1,12 +1,13 @@
 /**
- * Tryb komend (⌘K / Ctrl+K). `action` obsługuje IntakeEngine.runCommand().
- * Mockup: podsumowanie + fake …; dodane: waliduj, popraw, od nowa.
+ * Tryb komend intake (⌘K / Ctrl+K). `action` obsługuje IntakeEngine.runCommand().
+ * Komendy widoku planu są osobno: core/plan/plan-commands.ts.
  */
 export type CommandAction =
   | { type: 'summary' }
   | { type: 'validate' }
   | { type: 'fix' }
   | { type: 'restart' }
+  | { type: 'prompt' }
   | { type: 'fake'; preset: string };
 
 export interface CommandDef {
@@ -14,18 +15,15 @@ export interface CommandDef {
   aliases?: string[];
   desc: string;
   action: CommandAction;
-  /** Widoczna tylko z włączonym demo. */
-  demoOnly?: boolean;
 }
 
 export const COMMANDS: CommandDef[] = [
-  { cmd: 'podsumowanie', aliases: ['podsum', 'podsumuj'], desc: 'Pokaż podsumowanie (Dane klienta)', action: { type: 'summary' } },
-  { cmd: 'waliduj', aliases: ['walidacja', 'sprawdz', 'sprawdź'], desc: 'Zweryfikuj kartę w usłudze walidacji', action: { type: 'validate' } },
+  { cmd: 'podsumowanie', aliases: ['podsum', 'podsumuj'], desc: 'Pokaż dane podstawowe (⌘J)', action: { type: 'summary' } },
+  { cmd: 'prompt', aliases: ['ai', 'kopiuj prompt'], desc: 'Skopiuj prompt dla AI (profil + schemat planu)', action: { type: 'prompt' } },
+  { cmd: 'waliduj', aliases: ['sprawdz', 'sprawdź'], desc: 'Sprawdź spójność profilu', action: { type: 'validate' } },
   { cmd: 'popraw', desc: 'Przejdź po polach do poprawy', action: { type: 'fix' } },
-  { cmd: 'od nowa', aliases: ['restart', 'reset'], desc: 'Wyczyść kartę i zacznij od początku', action: { type: 'restart' } },
-  { cmd: 'fake ctct', desc: 'Kontakt: imię, nazwisko, telefon', action: { type: 'fake', preset: 'ctct' } },
-  { cmd: 'fake mail', desc: 'Adres e-mail', action: { type: 'fake', preset: 'mail' } },
-  { cmd: 'fake adr', desc: 'Adres klienta i wysyłki', action: { type: 'fake', preset: 'adr' } },
-  { cmd: 'fake dod', desc: 'Dane dodatkowe (demo)', action: { type: 'fake', preset: 'dod' }, demoOnly: true },
-  { cmd: 'fake all', desc: 'Wszystkie sekcje', action: { type: 'fake', preset: 'all' } },
+  { cmd: 'od nowa', aliases: ['restart', 'reset'], desc: 'Wyczyść profil i zacznij od początku', action: { type: 'restart' } },
+  { cmd: 'fake pl', desc: 'Przykładowy trójboista (z zawodami i kontuzją)', action: { type: 'fake', preset: 'pl' } },
+  { cmd: 'fake pb', desc: 'Przykładowy powerbuilder (półmaraton + handstand)', action: { type: 'fake', preset: 'pb' } },
+  { cmd: 'fake all', desc: 'Pełny profil (= fake pl)', action: { type: 'fake', preset: 'all' } },
 ];

@@ -15,6 +15,12 @@ Pole = `FieldDef` (`src/app/core/engine/field-def.ts`). Typ pola = wpis w `FIELD
 | `number` | `12`, `12,5` | number | bez zmian | — | „Podaj liczbę." |
 | `select` | etykieta, kod lub alias (bez polskich znaków też) | `value` pozycji słownika (albo tekst przy `allowCustom`) | `label` | uzupełnienie pierwszej pasującej opcji (Tab) | „Wybierz wartość z listy (↑↓ i Enter)." |
 | `boolean` | tak / t / nie / n | `true` / `false` | `tak` / `nie` | uzupełnienie | „Wpisz "tak" lub "nie"." |
+| `multiselect` | `klatka, plecy`, numery z listy `1,3`, `brak` | `string[]` kodów (`[]` = brak) | etykiety po przecinku | uzupełnienie **ostatniego** tokenu; Tab dodaje pozycję | „„X" nie ma na liście…" |
+| `scale` | liczba całkowita z `min`–`max` (domyślnie 1–10) | number | bez zmian | `1–10` / ` / 10` | „Podaj liczbę całkowitą od … do …." |
+| `lift` | `180x3@8`, `180 x 3 @ 8.5`, `102,5kg x5`, `200` (= 1 powt.) | `{ kg, reps, rpe \| null }` | `180x3@8` | `kg x powt. @RPE` | „Format: ciężar x powtórzenia @RPE…" |
+
+Pola opcjonalne (`required: false`): pusty Enter zapisuje `''` / `[]` i liczy się jako odpowiedź;
+`null` w modelu = pytanie jeszcze nie padło (wznowienie intake od pierwszego pytania bez odpowiedzi).
 
 Nowy typ (np. `pesel`, `nip`, `iban`, `money`): dodaj nazwę do `FieldType` i handler do `FIELD_TYPES`;
 testy w `field-types.spec.ts`.

@@ -11,7 +11,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { IntakeEngine } from '../../../core/engine/intake-engine';
-import { FIELD_TYPES } from '../../../core/engine/field-types';
+import { FIELD_TYPES, lastToken, replaceLastToken, splitTokens } from '../../../core/engine/field-types';
 import { DictEntry } from '../../../core/engine/field-def';
 import { normalize } from '../../../core/engine/text';
 
@@ -19,6 +19,8 @@ interface OptionRow {
   entry: DictEntry;
   /** Pierwsza pozycja słownika = najbardziej prawdopodobna. */
   first: boolean;
+  /** multiselect: pozycja już jest we wpisie. */
+  chosen: boolean;
 }
 
 /**
@@ -57,6 +59,10 @@ export class CommandLine {
   );
 
   protected readonly isCommand = computed(() => this.s.mode() === 'command');
+  /** Pole wielokrotnego wyboru: dropdown filtruje i uzupełnia OSTATNI token („klatka, ple|"). */
+  protected readonly isMulti = computed(() => !this.isCommand() && this.prompt().field?.type === 'multiselect');
+  /** Fraza do dopasowania opcji: cały wpis albo ostatni token (multiselect). */
+  private readonly query = computed(() => normalize(this.isMulti() ? lastToken(this.s.draft()) : this.s.draft()));
 
   protected readonly suggestions = computed(() =>
     this.isCommand() && !this.dropdownClosed() ? this.engine.commandSuggestions(this.s.draft()) : [],
@@ -66,15 +72,20 @@ export class CommandLine {
   protected readonly options = computed<OptionRow[]>(() => {
     const p = this.prompt();
     if (this.isCommand() || p.disabled || !p.options.length || this.dropdownClosed()) return [];
-    const rows = p.options.map((entry, i) => ({ entry, first: i === 0 }));
-    const d = normalize(this.s.draft());
+    const picked = this.isMulti() ? splitTokens(this.s.draft()).map(normalize) : [];
+    const rows = p.options.map((entry, i) => ({
+      entry,
+      first: i === 0 && !this.isMulti(),
+      chosen: picked.some((t) => matchesExactly(entry, t)),
+    }));
+    const d = this.query();
     if (!d || rows.some((r) => matchesExactly(r.entry, d))) return rows;
     return rows.filter((r) => matchesPartly(r.entry, d));
   });
 
   protected readonly activeOption = computed(() => {
     const rows = this.options();
-    const d = normalize(this.s.draft());
+    const d = this.query();
     const exact = rows.findIndex((r) => matchesExactly(r.entry, d));
     if (exact !== -1) return exact;
     if (!d || !rows.length) return -1;
@@ -87,11 +98,12 @@ export class CommandLine {
   /** Uzupełnienie Tabem: pierwsza opcja/komenda zaczynająca się od wpisu. */
   private readonly completion = computed<string | null>(() => {
     const d = this.s.draft();
-    const nd = normalize(d);
+    const nd = this.query();
     if (!nd) return null;
     const labels = this.isCommand() ? this.suggestions().map((c) => c.cmd) : this.prompt().options.map((o) => o.label);
     const hit = labels.find((l) => normalize(l).startsWith(nd) && normalize(l) !== nd);
-    return hit ?? null;
+    if (!hit) return null;
+    return this.isMulti() ? d.slice(0, d.length - lastToken(d).length) + hit : hit;
   });
 
   /** Szary tekst za kursorem: format pola (adres, data) albo uzupełnienie. */
@@ -220,7 +232,7 @@ export class CommandLine {
         e.preventDefault();
         const cur = this.activeOption();
         const next = cur === -1 ? (dir === 1 ? 0 : options.length - 1) : (cur + dir + options.length) % options.length;
-        this.s.draft.set(options[next].entry.label);
+        this.s.draft.set(this.withOption(options[next].entry.label));
         this.engine.clearError();
         this.syncInput();
       }
@@ -229,6 +241,13 @@ export class CommandLine {
     if (e.key === 'Escape') {
       e.preventDefault();
       this.closedFor.set(this.promptKey());
+      return;
+    }
+    if (e.key === 'Tab' && !e.shiftKey && this.isMulti() && options.length && this.activeOption() >= 0) {
+      // Tab w multiselect: dodaj podświetloną pozycję i przejdź do kolejnej.
+      e.preventDefault();
+      this.s.draft.set(replaceLastToken(this.s.draft(), options[this.activeOption()].entry.label));
+      this.syncInput();
       return;
     }
     if (e.key === 'Tab' && !e.shiftKey && this.completion()) {
@@ -248,14 +267,30 @@ export class CommandLine {
         return;
       }
       const active = this.activeOption();
-      if (options.length && active >= 0) this.s.draft.set(options[active].entry.label);
+      if (options.length && active >= 0 && (!this.isMulti() || this.query())) {
+        this.s.draft.set(this.withOption(options[active].entry.label));
+      }
       this.submit();
     }
   }
 
   protected pickOption(entry: DictEntry): void {
+    if (this.isMulti()) {
+      // Klik dodaje pozycję do listy — zatwierdzenie Enterem.
+      this.s.draft.set(replaceLastToken(this.s.draft(), entry.label));
+      this.syncInput();
+      this.input().nativeElement.focus();
+      return;
+    }
     this.s.draft.set(entry.label);
     this.submit();
+  }
+
+  /** Wpis po wyborze opcji: cała wartość (select) albo podmieniony ostatni token (multiselect). */
+  private withOption(label: string): string {
+    if (!this.isMulti()) return label;
+    const d = this.s.draft();
+    return d.slice(0, d.length - lastToken(d).length) + label;
   }
 
   protected runSuggestion(cmd: string): void {

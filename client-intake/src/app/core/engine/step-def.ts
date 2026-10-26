@@ -70,6 +70,12 @@ export interface CollectionDef<M = any, I extends CollectionItem = any> {
   summary: (items: I[]) => string;
   /** Czy kolekcja liczy się do % całości (domyślnie nie — tylko do % grupy). */
   countInTotal?: boolean;
+  /** Pusta lista z `load` (np. wpis „brak") kończy krok bez pytań — zamiast „Brak osób". */
+  allowEmpty?: boolean;
+  /** Rzeczownik w liczniku pytań („Cel 1/2"). Domyślnie „Osoba". */
+  itemNoun?: string;
+  /** Podpowiedź na etapie wyboru ✕ (domyślnie tekst o osobach). */
+  selectHint?: string;
 }
 
 export interface CollectionItem {

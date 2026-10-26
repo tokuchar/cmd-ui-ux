@@ -45,4 +45,17 @@
   --color-danger-ring: var(--danger-ring);
   --color-danger-soft: var(--danger-soft);
   --color-warning: var(--warning);
+
+  --color-phase-accum: var(--phase-accum);
+  --color-phase-intens: var(--phase-intens);
+  --color-phase-real: var(--phase-real);
+  --color-phase-deload: var(--phase-deload);
+  --color-phase-taper: var(--phase-taper);
+  --color-phase-hyper: var(--phase-hyper);
+  --color-phase-main: var(--phase-main);
+  --color-phase-side: var(--phase-side);
+  --color-carb-high: var(--carb-high);
+  --color-pain-low: var(--pain-low);
+  --color-pain-mid: var(--pain-mid);
+  --color-pain-high: var(--pain-high);
 }

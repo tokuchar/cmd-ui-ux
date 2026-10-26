@@ -1,9 +1,10 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { APP_CONFIG } from '../config/app-config';
 import { FieldIssue } from '../engine/field-def';
 import { groupProgress, totalProgress } from '../engine/flow';
 import { CollectionItem } from '../engine/step-def';
-import { Customer } from '../models/customer.model';
+import { AthleteProfile, emptyAthlete } from '../models/athlete.model';
+import { readJson, STORAGE_KEYS, writeJson } from '../storage/local-store';
 import { DictionaryService } from '../services/dictionary.service';
 
 /** Gdzie jest operator. */
@@ -51,7 +52,8 @@ export class IntakeStore {
   private readonly cfg = inject(APP_CONFIG);
   private readonly dict = inject(DictionaryService);
 
-  readonly model = signal<Customer>(this.cfg.flow.emptyModel());
+  /** Profil odtwarzany z localStorage (nowe pola modelu uzupełniane wartościami pustymi). */
+  readonly model = signal<AthleteProfile>({ ...emptyAthlete(), ...(readJson<AthleteProfile>(STORAGE_KEYS.profile) ?? {}) });
   readonly cursor = signal<Cursor>({ kind: 'field', step: 0, field: 0 });
   readonly mode = signal<'form' | 'command'>('form');
   readonly editMode = signal<EditMode>('flow');
@@ -80,4 +82,9 @@ export class IntakeStore {
 
   readonly groupProgress = computed(() => groupProgress(this.cfg.flow, this.model(), this.dict));
   readonly totalProgress = computed(() => totalProgress(this.cfg.flow, this.model(), this.dict));
+
+  constructor() {
+    // Autozapis profilu po każdej zmianie (bez backendu).
+    effect(() => writeJson(STORAGE_KEYS.profile, this.model()));
+  }
 }

@@ -1,3 +1,5 @@
+> **Uwaga:** dokument z poprzedniej wersji aplikacji (karta klienta + backend). Aktualny kierunek: intake sportowy → AI → plan — patrz [DATA-FLOW.md](DATA-FLOW.md).
+
 # Playbook migracji: kreator/formularz → command line
 
 Cel: przenieść istniejącą aplikację Angular (klasyczny wizard/formularz zakładania klienta) na ten

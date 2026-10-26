@@ -1,0 +1,183 @@
+<main class="relative flex-1 w-full">
+  @if (!theme.plainBg()) {
+    <app-animated-background />
+    <div aria-hidden="true" class="pointer-events-none absolute inset-0 z-0 bg-linear-to-b from-app-bg/55 via-app-bg/40 to-app-bg/80"></div>
+  }
+
+  <div class="relative z-10 w-full max-w-[1100px] mx-auto px-4 sm:px-6 py-6 flex flex-col gap-5">
+    <!-- Nagłówek + akcje -->
+    <header class="flex flex-wrap items-end justify-between gap-4">
+      <div class="min-w-0">
+        <p class="text-[11px] font-semibold uppercase tracking-wider text-app-muted">Dane podstawowe · {{ progress() }}%</p>
+        <h1 class="text-2xl sm:text-3xl font-bold tracking-tight truncate">{{ a().imie || 'Zawodnik' }}</h1>
+        <p class="text-sm text-app-muted font-mono mt-0.5">{{ goalLine() }}</p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button
+          type="button"
+          (click)="copyPrompt()"
+          class="px-3.5 py-2 bg-brand hover:bg-brand-hover text-on-brand text-xs font-semibold rounded-md transition-all"
+        >
+          📋 Kopiuj prompt AI
+        </button>
+        <a routerLink="/plan" [queryParams]="{ import: 1 }" class="px-3.5 py-2 border border-app-line bg-app-surface hover:bg-app-hover text-xs font-medium rounded-md transition-all">
+          Wklej JSON z AI ›
+        </a>
+        <button type="button" (click)="exportJson()" class="px-3 py-2 border border-app-line bg-app-surface hover:bg-app-hover text-xs font-medium rounded-md text-app-muted hover:text-app-text">
+          ⬇ Eksport
+        </button>
+        <label class="px-3 py-2 border border-app-line bg-app-surface hover:bg-app-hover text-xs font-medium rounded-md text-app-muted hover:text-app-text cursor-pointer">
+          ⬆ Import
+          <input #file type="file" accept="application/json,.json" class="sr-only" (change)="importJson(file)" />
+        </label>
+      </div>
+    </header>
+
+    @if (progress() < 100) {
+      <div class="bg-app-surface border border-warning/40 rounded-xl px-4 py-3 text-xs flex items-center justify-between gap-3">
+        <span><span class="text-warning font-bold">⚠</span> Profil wypełniony w {{ progress() }}% — AI dostanie mniej danych.</span>
+        <a routerLink="/intake" class="text-brand-text font-semibold whitespace-nowrap hover:underline">Dokończ intake ›</a>
+      </div>
+    }
+
+    <!-- Hero: liczby -->
+    <section class="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5">
+      <div class="bg-app-surface border border-app-line rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col gap-5">
+        <div class="grid grid-cols-3 sm:grid-cols-6 gap-3">
+          @for (s of hero(); track s.label) {
+            <div class="min-w-0">
+              <div class="text-[10px] font-bold uppercase tracking-wider text-app-muted">{{ s.label }}</div>
+              <div class="font-mono text-xl sm:text-2xl font-semibold tabular-nums truncate">
+                {{ s.value }}<span class="text-xs text-app-muted font-normal ml-0.5">{{ s.unit }}</span>
+              </div>
+              @if (s.hint) {
+                <div class="text-[10px] text-app-muted font-mono truncate">{{ s.hint }}</div>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="border-t border-app-line pt-4 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-5 items-center">
+          <div class="flex flex-col gap-2.5">
+            @for (l of lifts(); track l.label) {
+              <div class="grid grid-cols-[84px_1fr_76px] items-center gap-3 text-xs">
+                <span class="font-semibold text-app-muted uppercase text-[10px] tracking-wider">{{ l.label }}</span>
+                <div class="h-2 rounded-full bg-app-track overflow-hidden">
+                  <div class="h-full rounded-full bg-brand transition-all duration-500" [style.width.%]="l.pct"></div>
+                </div>
+                <span class="font-mono font-semibold text-right tabular-nums">{{ l.max ? l.max + ' kg' : '—' }}</span>
+              </div>
+            }
+          </div>
+          <div class="flex sm:flex-col gap-4 sm:gap-1 sm:text-right sm:border-l sm:border-app-line sm:pl-5">
+            <div>
+              <div class="text-[10px] font-bold uppercase tracking-wider text-app-muted">Total e1RM</div>
+              <div class="font-mono text-3xl font-bold tabular-nums">{{ strength().total ?? '—' }}<span class="text-xs text-app-muted font-normal ml-0.5">kg</span></div>
+            </div>
+            <div class="text-[11px] font-mono text-app-muted">
+              @if (strength().ratio) {
+                <div>{{ strength().ratio }}× masa ciała</div>
+              }
+              @if (strength().target && strength().total) {
+                <div [class]="strength().target! > strength().total! ? 'text-warning' : 'text-success-text'">
+                  cel {{ strength().target }} ({{ strength().target! - strength().total! > 0 ? '+' : '' }}{{ strength().target! - strength().total! }} kg)
+                </div>
+              }
+              @if (strength().ohp) {
+                <div>OHP e1RM {{ strength().ohp }} kg</div>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mapa kontuzji -->
+      <div class="bg-app-surface border border-app-line rounded-2xl p-4 shadow-sm flex flex-col gap-3">
+        <div class="flex items-center justify-between">
+          <h2 class="text-[11px] font-bold uppercase tracking-wider text-app-muted">Kontuzje</h2>
+          <span class="flex items-center gap-2 text-[10px] font-mono text-app-muted">
+            <span class="w-2 h-2 rounded-full bg-pain-low"></span>0–3
+            <span class="w-2 h-2 rounded-full bg-pain-mid"></span>4–6
+            <span class="w-2 h-2 rounded-full bg-pain-high"></span>7+
+          </span>
+        </div>
+        <div class="flex flex-col gap-3">
+          <app-body-map [injuries]="injuries()" />
+          <ul class="flex flex-col gap-2 text-xs">
+            @for (k of injuries(); track k.id) {
+              <li class="border-l-2 pl-2" [style.border-color]="'currentColor'" [class]="painClass(k.bol)">
+                <div class="font-semibold text-app-text">{{ k.nazwa }} <span class="font-mono" [class]="painClass(k.bol)">{{ k.bol ?? '?' }}/10</span></div>
+                <div class="text-[11px] text-app-muted">
+                  {{ labelOf('od_kiedy', k.od_kiedy) }}@if (k.diagnoza) { · {{ k.diagnoza }} }
+                </div>
+                @if (k.ruchy_bolesne?.length) {
+                  <div class="text-[10px] text-app-muted font-mono">boli: {{ k.ruchy_bolesne!.join(', ') }}</div>
+                }
+              </li>
+            } @empty {
+              <li class="text-app-muted text-[11px] italic">{{ a().kontuzje === null ? 'Nie podano' : 'Brak obecnych kontuzji' }}</li>
+            }
+          </ul>
+        </div>
+        @if (goals().length) {
+          <div class="border-t border-app-line pt-3">
+            <h2 class="text-[11px] font-bold uppercase tracking-wider text-app-muted mb-1.5">Cele dodatkowe</h2>
+            <ul class="flex flex-col gap-1 text-xs">
+              @for (g of goals(); track g.id) {
+                <li class="flex justify-between gap-2">
+                  <span class="truncate"><span class="text-phase-side">⑂</span> {{ g.nazwa }}</span>
+                  <span class="font-mono text-app-muted truncate">{{ g.aktualnie || '?' }} → {{ g.cel }}</span>
+                </li>
+              }
+            </ul>
+          </div>
+        }
+      </div>
+    </section>
+
+    <!-- Kafle per grupa (te same wiersze co „Dane podstawowe" w intake) -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      @for (g of engine.sheet(); track g.id) {
+        <div class="bg-app-surface border border-app-line rounded-xl p-3 shadow-sm min-w-0">
+          <h2 class="text-[10px] font-bold uppercase tracking-wider text-brand-text pb-1.5">{{ g.label }}</h2>
+          @if (g.issue) {
+            <div class="text-[11px] text-danger-text pb-1">⚠ {{ g.issue }}</div>
+          }
+          @for (row of g.rows; track row.key) {
+            <button
+              type="button"
+              (click)="edit(row)"
+              title="Edytuj w intake"
+              class="editable-row w-full text-left py-1 flex items-baseline justify-between gap-2 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+              [class.pl-2]="row.sub"
+            >
+              <span class="text-[10px] text-app-muted shrink-0 max-w-[45%] truncate" [class.uppercase]="!row.sub">{{ row.label }}</span>
+              <span class="font-mono text-[11px] truncate text-right" [class]="row.value ? 'text-app-text' : 'text-app-empty italic'" [title]="row.value">
+                {{ row.value || '—' }}
+              </span>
+            </button>
+            @if (row.issue) {
+              <div class="text-[10px] text-danger-text text-right">⚠ {{ row.issue }}</div>
+            }
+          }
+        </div>
+      }
+    </section>
+
+    <!-- Podgląd promptu -->
+    <section class="bg-app-surface border border-app-line rounded-xl shadow-sm">
+      <button type="button" (click)="showPrompt.set(!showPrompt())" class="w-full px-4 py-3 flex items-center justify-between text-xs font-semibold">
+        <span class="flex items-center gap-2">
+          <span class="w-3 inline-block text-app-muted">{{ showPrompt() ? '▾' : '▸' }}</span>
+          Podgląd promptu dla AI
+          <span class="font-mono font-normal text-app-muted">{{ prompt().length }} znaków</span>
+        </span>
+        <span class="text-app-muted font-normal">dane + schemat JSON + reguły</span>
+      </button>
+      @if (showPrompt()) {
+        <pre class="px-4 pb-4 text-[11px] leading-relaxed font-mono whitespace-pre-wrap break-words text-app-muted max-h-[420px] overflow-y-auto">{{ prompt() }}</pre>
+      }
+    </section>
+  </div>
+</main>
+<app-toast-outlet />

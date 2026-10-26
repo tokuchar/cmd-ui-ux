@@ -1,0 +1,506 @@
+<div class="bg-app-surface border border-app-line rounded-2xl shadow-sm p-4">
+  @switch (engine.panel()) {
+    <!-- ================= Import JSON z AI ================= -->
+    @case ('import') {
+      <div class="flex flex-col gap-3">
+        <div class="flex items-center justify-between gap-3">
+          <h2 class="text-[11px] font-bold uppercase tracking-wider text-app-muted">Wklej odpowiedź AI (JSON)</h2>
+          <label class="text-[11px] text-brand-text font-semibold cursor-pointer hover:underline">
+            albo wczytaj plik
+            <input #f type="file" accept="application/json,.json,.txt" class="sr-only" (change)="importFile(f)" />
+          </label>
+        </div>
+        <textarea
+          rows="10"
+          spellcheck="false"
+          [value]="importDraft()"
+          (input)="onImportInput($any($event.target).value)"
+          placeholder='{ "meta": { … }, "nutrition": { … }, "macrocycles": [ … ] }  — może być w bloku ```json'
+          class="w-full rounded-lg border border-app-line bg-app-bg p-3 font-mono text-[11px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-brand"
+        ></textarea>
+        @if (engine.importIssues().length) {
+          <ul class="max-h-48 overflow-y-auto flex flex-col gap-1 text-[11px] font-mono">
+            @for (i of engine.importIssues(); track $index) {
+              <li [class]="i.severity === 'error' ? 'text-danger-text' : 'text-warning'">
+                {{ i.severity === 'error' ? '✗' : '⚠' }} <span class="opacity-70">{{ i.path }}</span> — {{ i.message }}
+              </li>
+            }
+          </ul>
+        } @else if (importDraft()) {
+          <p class="text-[11px] font-mono text-success-text">✓ JSON wygląda poprawnie.</p>
+        }
+        <div class="flex justify-end gap-2">
+          <button type="button" (click)="engine.panel.set('week')" class="px-3 py-1.5 border border-app-line text-app-muted hover:text-app-text hover:bg-app-hover text-xs rounded-md">Anuluj</button>
+          <button
+            type="button"
+            [disabled]="!importDraft()"
+            (click)="applyImport()"
+            class="px-3 py-1.5 bg-brand hover:bg-brand-hover text-on-brand text-xs font-semibold rounded-md disabled:opacity-50"
+          >
+            Zapisz plan
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- ================= Makrocykl ================= -->
+    @case ('macro') {
+      <h2 class="text-[11px] font-bold uppercase tracking-wider text-app-muted mb-3">Makrocykl · {{ store.plan()?.meta?.goal }}</h2>
+      <div class="flex h-3 rounded-full overflow-hidden mb-4" aria-hidden="true">
+        @for (m of mesos(); track m.id) {
+          <div [style.flex-grow]="m.to - m.from + 1" [style.background]="m.color" class="border-r-2 border-app-surface last:border-r-0"></div>
+        }
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        @for (m of mesos(); track m.id) {
+          <button
+            type="button"
+            (click)="store.highlight.set(store.highlight() === m.id ? null : m.id)"
+            class="text-left border rounded-xl p-3 transition-colors hover:bg-app-hover"
+            [style.border-color]="store.highlight() === m.id ? m.color : 'var(--app-line)'"
+          >
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-semibold text-sm flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full" [style.background]="m.color"></span>{{ m.name }}</span>
+              <span class="font-mono text-[11px] text-app-muted">W{{ m.from }}–W{{ m.to }}</span>
+            </div>
+            <div class="text-[11px] text-app-muted mt-1">{{ m.focus }} · {{ m.notes }}</div>
+            <div class="font-mono text-[11px] mt-2 flex flex-wrap gap-x-3 gap-y-0.5">
+              <span>kcal {{ m.kcal >= 0 ? '+' : '' }}{{ m.kcal }}</span>
+              <span>sen {{ m.sleep }} h</span>
+              @if (m.deloads.length) {
+                <span>◐ deload W{{ m.deloads.join(', W') }}</span>
+              }
+            </div>
+            <div class="text-[11px] mt-1 text-app-muted">🍚 {{ m.carbs }}</div>
+          </button>
+        }
+      </div>
+    }
+
+    <!-- ================= Dieta ================= -->
+    @case ('diet') {
+      @if (ref(); as r) {
+        <div class="grid grid-cols-1 md:grid-cols-[1fr_1.4fr] gap-5">
+          <div class="flex flex-col gap-3">
+            <h2 class="text-[11px] font-bold uppercase tracking-wider text-app-muted">Żywienie · W{{ r.micro.week }}</h2>
+            @for (d of [{ k: 'Dzień treningowy', m: r.micro.nutrition.trainingDay }, { k: 'Dzień wolny', m: r.micro.nutrition.restDay }]; track d.k) {
+              <div>
+                <div class="flex justify-between text-xs mb-1"><span class="font-semibold">{{ d.k }}</span><span class="font-mono font-bold">{{ d.m.kcal }} kcal</span></div>
+                <div class="flex h-2.5 rounded-full overflow-hidden bg-app-track">
+                  <div class="bg-phase-hyper" [style.flex-grow]="d.m.protein * 4"></div>
+                  <div class="bg-carb-high" [style.flex-grow]="d.m.carbs * 4"></div>
+                  <div class="bg-phase-intens opacity-60" [style.flex-grow]="d.m.fat * 9"></div>
+                </div>
+                <div class="font-mono text-[10px] text-app-muted mt-1">B {{ d.m.protein }} g · W {{ d.m.carbs }} g · T {{ d.m.fat }} g</div>
+              </div>
+            }
+            <div class="text-xs">
+              <span class="font-semibold">High-carb:</span>
+              @for (d of r.micro.nutrition.highCarbDays; track d) {
+                <span class="ml-1 px-1.5 py-0.5 rounded bg-carb-high/15 text-[11px] font-mono">{{ dayLabel(d) }}</span>
+              }
+            </div>
+            <p class="text-[11px] text-app-muted">{{ r.meso.carbStrategy }}</p>
+            <ul class="text-[11px] text-app-muted list-disc pl-4">
+              @for (rule of store.plan()?.nutrition?.rules ?? []; track rule) {
+                <li>{{ rule }}</li>
+              }
+              @for (tip of r.micro.nutrition.tips ?? []; track tip) {
+                <li class="text-app-text">W{{ r.micro.week }}: {{ tip }}</li>
+              }
+            </ul>
+            @if (store.plan()?.nutrition?.caffeine; as c) {
+              <div class="rounded-xl border border-app-line p-3">
+                <div class="text-[10px] font-bold uppercase tracking-wider text-app-muted mb-1">☕ Kofeina</div>
+                <div class="font-mono text-xs"><strong>{{ c.preWorkoutMg }} mg</strong> {{ c.minutesBefore }} min przed · max {{ c.dailyMaxMg }} mg/dzień · stop {{ c.cutoffHoursBeforeSleep }} h przed snem</div>
+                @for (s of c.skipWhen ?? []; track s) {
+                  <div class="text-[11px] text-warning">⤼ {{ s }}</div>
+                }
+                @for (n of c.notes ?? []; track n) {
+                  <div class="text-[11px] text-app-muted">{{ n }}</div>
+                }
+              </div>
+            }
+            @if (store.plan()?.nutrition?.periWorkout; as f) {
+              <div class="rounded-xl border border-app-line p-3 text-[11px] flex flex-col gap-0.5">
+                <div class="text-[10px] font-bold uppercase tracking-wider text-app-muted mb-1">⏱ Okołotreningowo</div>
+                @if (f.pre) { <div><strong>Przed:</strong> {{ f.pre }}</div> }
+                @if (f.intra) { <div><strong>W trakcie:</strong> {{ f.intra }}</div> }
+                @if (f.post) { <div><strong>Po:</strong> {{ f.post }}</div> }
+              </div>
+            }
+            <button type="button" (click)="engine.run('porady')" class="text-left text-[11px] text-brand-text font-semibold hover:underline">Porady żywieniowe ({{ store.plan()?.nutrition?.tips?.length ?? 0 }}) ›</button>
+          </div>
+          <div>
+            <h2 class="text-[11px] font-bold uppercase tracking-wider text-app-muted mb-2">Kcal po tygodniach (trening / wolne)</h2>
+            <svg class="w-full" [attr.viewBox]="'0 0 ' + series().weeks.length * 22 + ' 64'" preserveAspectRatio="none" height="96" role="img" aria-label="Kalorie w tygodniach">
+              @for (w of series().weeks; track w; let i = $index) {
+                <rect [attr.x]="i * 22 + 3" [attr.y]="52 - bar(series().kcal[i], series().maxKcal, 48)" width="7" [attr.height]="bar(series().kcal[i], series().maxKcal, 48)" rx="1.5"
+                  [attr.fill]="w === r.micro.week ? 'var(--brand)' : 'var(--phase-accum)'"><title>W{{ w }}: {{ series().kcal[i] }} kcal</title></rect>
+                <rect [attr.x]="i * 22 + 11" [attr.y]="52 - bar(series().rest[i], series().maxKcal, 48)" width="7" [attr.height]="bar(series().rest[i], series().maxKcal, 48)" rx="1.5"
+                  fill="var(--app-empty-dim)"><title>W{{ w }} wolne: {{ series().rest[i] }} kcal</title></rect>
+                <text [attr.x]="i * 22 + 11" y="62" text-anchor="middle" font-size="6" fill="var(--app-muted)">{{ w }}</text>
+              }
+            </svg>
+          </div>
+        </div>
+      }
+    }
+
+    <!-- ================= Porady żywieniowe ================= -->
+    @case ('tips') {
+      <div class="flex flex-wrap items-baseline justify-between gap-2 mb-3">
+        <h2 class="text-[11px] font-bold uppercase tracking-wider text-app-muted">Porady żywieniowe · W{{ store.current() }}</h2>
+        <div class="flex flex-wrap gap-1 text-[10px] font-mono">
+          @for (cat of ['faza', 'zdrowie', 'okolotreningowo', 'nawodnienie', 'suplementacja', 'sen', 'nawyki']; track cat) {
+            <button type="button" (click)="engine.run('porady ' + cat)" class="px-1.5 py-0.5 rounded border" [class]="engine.tipFilter() === cat ? 'border-brand text-brand-text' : 'border-app-line text-app-muted hover:text-app-text'">
+              {{ tipIcons[cat] }} {{ cat }}
+            </button>
+          }
+          @if (engine.tipFilter()) {
+            <button type="button" (click)="engine.run('porady')" class="px-1.5 py-0.5 text-app-muted hover:text-app-text">✕</button>
+          }
+        </div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+        @for (t of tips(); track t.title) {
+          <div class="rounded-xl border p-3" [class]="t.priority === 1 ? 'border-brand/40' : 'border-app-line'">
+            <div class="flex items-center justify-between gap-2 mb-1">
+              <span class="font-semibold">{{ tipIcons[t.category] ?? '•' }} {{ t.title }}</span>
+              <span class="text-[10px] font-mono text-app-muted shrink-0">{{ t.category }}{{ t.weeks ? ' · W' + t.weeks[0] + '–' + t.weeks[1] : '' }}</span>
+            </div>
+            <p class="text-[11px] text-app-muted leading-relaxed">{{ t.text }}</p>
+          </div>
+        } @empty {
+          <p class="text-app-muted italic">Brak porad dla tego filtra / tygodnia.</p>
+        }
+      </div>
+      <p class="text-[10px] text-app-muted mt-3">Porady z planu AI nie zastępują konsultacji z lekarzem ani dietetykiem klinicznym.</p>
+    }
+
+    <!-- ================= Regeneracja / Cardio ================= -->
+    @case ('recovery') {
+      @if (ref(); as r) {
+        <div class="grid grid-cols-1 md:grid-cols-[1fr_1.4fr] gap-5">
+          <div class="flex flex-col gap-2">
+            <h2 class="text-[11px] font-bold uppercase tracking-wider text-app-muted">Regeneracja · W{{ r.micro.week }}</h2>
+            <div class="flex gap-6">
+              <div><div class="text-[10px] uppercase text-app-muted font-bold">Sen</div><div class="font-mono text-2xl font-semibold">{{ r.micro.recovery.sleepH }}<span class="text-xs text-app-muted"> h</span></div></div>
+              <div><div class="text-[10px] uppercase text-app-muted font-bold">Kroki</div><div class="font-mono text-2xl font-semibold">{{ r.micro.recovery.steps }}</div></div>
+            </div>
+            @if (r.micro.recovery.notes) {
+              <p class="text-[11px] text-app-muted">{{ r.micro.recovery.notes }}</p>
+            }
+          </div>
+          <div>
+            <h2 class="text-[11px] font-bold uppercase tracking-wider text-app-muted mb-2">Sen po tygodniach</h2>
+            <svg class="w-full" [attr.viewBox]="'0 0 ' + series().weeks.length * 22 + ' 64'" preserveAspectRatio="none" height="80" role="img" aria-label="Sen w tygodniach">
+              @for (w of series().weeks; track w; let i = $index) {
+                <rect [attr.x]="i * 22 + 5" [attr.y]="52 - bar(series().sleep[i] - 5, 5, 48)" width="12" [attr.height]="bar(series().sleep[i] - 5, 5, 48)" rx="2"
+                  [attr.fill]="w === r.micro.week ? 'var(--brand)' : 'var(--phase-hyper)'"><title>W{{ w }}: {{ series().sleep[i] }} h</title></rect>
+                <text [attr.x]="i * 22 + 11" y="62" text-anchor="middle" font-size="6" fill="var(--app-muted)">{{ w }}</text>
+              }
+            </svg>
+          </div>
+        </div>
+      }
+    }
+    @case ('cardio') {
+      @if (ref(); as r) {
+        <h2 class="text-[11px] font-bold uppercase tracking-wider text-app-muted mb-2">Cardio · W{{ r.micro.week }}</h2>
+        <ul class="flex flex-col gap-1.5 text-xs">
+          @for (c of r.micro.cardio; track $index) {
+            <li class="flex justify-between gap-3 border-b border-app-line/50 pb-1.5">
+              <span><span class="font-mono text-app-muted w-8 inline-block">{{ c.day }}</span> {{ c.type }}</span>
+              <span class="font-mono">{{ c.minutes }} min {{ c.zone }} <span class="text-phase-hyper">{{ zoneText(c.zone) }}</span> <span class="text-app-muted">{{ c.notes }}</span></span>
+            </li>
+          } @empty {
+            <li class="text-app-muted italic">Brak cardio w tym tygodniu.</li>
+          }
+        </ul>
+        @if (engine.zones().length) {
+          <div class="mt-3 flex flex-wrap gap-2 text-[10px] font-mono">
+            @for (z of engine.zones(); track z.zone) {
+              <span class="px-1.5 py-0.5 rounded border border-app-line"><strong>{{ z.zone }}</strong> {{ z.min }}–{{ z.max }} · {{ z.label }}</span>
+            }
+          </div>
+        }
+      }
+    }
+
+    <!-- ================= Rozgrzewka / prehab ================= -->
+    @case ('prehab') {
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+        @for (col of [{ t: 'Rozgrzewka', l: prehab().warmup }, { t: 'Prehab / rehab', l: prehab().prehab }, { t: 'Wyciszenie', l: prehab().cooldown }]; track col.t) {
+          <div>
+            <h2 class="text-[11px] font-bold uppercase tracking-wider text-app-muted mb-2">{{ col.t }}</h2>
+            <ul class="flex flex-col gap-1.5">
+              @for (d of col.l; track d.name) {
+                <li>
+                  <div class="font-medium">{{ d.name }}</div>
+                  <div class="font-mono text-[10px] text-app-muted">
+                    {{ d.sets ? d.sets + ' x ' : '' }}{{ d.reps ?? '' }}{{ d.durationSec ? d.durationSec + ' s' : '' }}
+                    @if (d.target) { · <span class="text-pain-mid">{{ d.target }}</span> }
+                    @if (d.notes) { · {{ d.notes }} }
+                  </div>
+                </li>
+              } @empty {
+                <li class="text-app-muted italic">—</li>
+              }
+            </ul>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- ================= Cele dodatkowe ================= -->
+    @case ('goals') {
+      <h2 class="text-[11px] font-bold uppercase tracking-wider text-app-muted mb-2">Cele dodatkowe</h2>
+      <div class="flex flex-col gap-3">
+        @for (g of store.plan()?.secondaryGoals ?? []; track g.goal) {
+          <div>
+            <div class="text-sm font-semibold"><span class="text-phase-side">⑂</span> {{ g.goal }} <span class="text-[11px] font-normal text-app-muted">{{ g.type }}</span></div>
+            <ol class="mt-1 flex flex-wrap gap-2 text-[11px] font-mono">
+              @for (m of g.milestones; track m.week) {
+                <li class="px-2 py-1 rounded-md border" [class]="m.week <= store.head() ? 'border-phase-side text-app-text' : 'border-app-line text-app-muted'">W{{ m.week }} · {{ m.target }}</li>
+              }
+            </ol>
+          </div>
+        } @empty {
+          <p class="text-xs text-app-muted italic">Plan nie ma celów dodatkowych.</p>
+        }
+      </div>
+    }
+
+    <!-- ================= Ciężary ================= -->
+    @case ('loads') {
+      @if (engine.activeSession(); as s) {
+        <div class="flex items-center justify-between gap-3 mb-2">
+          <h2 class="text-[11px] font-bold uppercase tracking-wider text-app-muted">Ciężary · {{ s.session.name }} · W{{ s.week }} {{ dayLabel(s.session.day) }}</h2>
+          <button type="button" (click)="engine.openSession(s.key)" class="text-[11px] text-brand-text font-semibold hover:underline">otwórz sesję ›</button>
+        </div>
+        <table class="w-full text-xs">
+          <tbody>
+            @for (row of engine.loads(); track $index; let i = $index) {
+              <tr class="border-b border-app-line/50 last:border-0 align-top">
+                <td class="py-1.5 pr-2 font-mono text-app-muted w-6">{{ i + 1 }}</td>
+                <td class="py-1.5 pr-2">
+                  <div class="font-medium">{{ row.exercise }}</div>
+                  @if (row.injury) {
+                    <div class="text-[10px] text-pain-mid">🩹 {{ row.injury }}</div>
+                  }
+                  @if (row.warning) {
+                    <div class="text-[10px] text-danger-text">⚠ {{ row.warning }}</div>
+                  }
+                </td>
+                <td class="py-1.5 pr-2 font-mono whitespace-nowrap">{{ row.set }}</td>
+                <td class="py-1.5 pl-2 hidden sm:table-cell">
+                  <span class="font-mono text-[10px] px-1.5 rounded bg-app-hover text-app-muted" [title]="row.note ?? ''">{{ row.method }}</span>
+                  <div class="text-[10px] text-app-muted">{{ row.basis }}</div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      } @else {
+        <p class="text-xs text-app-muted italic">Brak sesji do wyliczenia.</p>
+      }
+    }
+
+    <!-- ================= Log / historia / pomoc ================= -->
+    @case ('events') {
+      @let a = engine.assessment();
+      <div class="grid grid-cols-1 md:grid-cols-[1.2fr_1fr] gap-5 text-xs">
+        <div class="flex flex-col gap-3">
+          <div>
+            <div class="flex items-baseline justify-between">
+              <h2 class="text-[11px] font-bold uppercase tracking-wider text-app-muted">Zdarzenia od ostatniego przegenerowania</h2>
+              <span class="font-mono font-bold" [class]="a.verdict === 'regen' ? 'text-danger-text' : a.verdict === 'watch' ? 'text-warning' : 'text-success-text'">
+                {{ a.score }} · {{ verdictLabels[a.verdict] }}
+              </span>
+            </div>
+            <div class="relative h-2.5 rounded-full bg-app-track mt-2 overflow-hidden">
+              <div class="h-full rounded-full transition-all" [style.width.%]="scorePct()" [class]="a.verdict === 'regen' ? 'bg-danger' : a.verdict === 'watch' ? 'bg-warning' : 'bg-success'"></div>
+              <div class="absolute inset-y-0 w-px bg-app-text/40" [style.left.%]="(watchThreshold / (regenThreshold * 1.5)) * 100" title="obserwuj"></div>
+              <div class="absolute inset-y-0 w-0.5 bg-danger" [style.left.%]="(1 / 1.5) * 100" title="przegenerowanie"></div>
+            </div>
+            <div class="flex justify-between font-mono text-[10px] text-app-muted mt-1"><span>0</span><span>obserwuj {{ watchThreshold }}</span><span>przegeneruj {{ regenThreshold }}</span></div>
+          </div>
+          @for (w of a.churn; track w) {
+            <p class="text-[11px] text-warning">⚠ {{ w }}</p>
+          }
+          <ul class="flex flex-col gap-1">
+            @for (i of a.items; track i.event.id) {
+              <li class="flex justify-between gap-2 border-b border-app-line/50 pb-1">
+                <span>
+                  <span class="font-semibold">{{ eventTypes[i.event.type].label }}</span>
+                  <span class="text-app-muted"> · {{ i.event.severity }}/3{{ i.event.note ? ' · ' + i.event.note : '' }}{{ i.event.auto ? ' · auto' : '' }}</span>
+                </span>
+                <span class="font-mono text-app-muted shrink-0" [title]="'świeżość ' + (i.freshness * 100).toFixed(0) + '%' + (i.continuity ? ' · ciągłość ×1,5' : '')">
+                  {{ i.event.at.slice(5, 10) }} · <strong class="text-app-text">{{ i.points }}</strong>{{ i.continuity ? ' ⟲' : '' }}
+                </span>
+              </li>
+            } @empty {
+              <li class="text-app-muted italic">Brak zdarzeń — zglos choroba 2, sen 6 7, waga 85.2…</li>
+            }
+          </ul>
+          @if (store.regens().length) {
+            <div>
+              <h3 class="text-[10px] font-bold uppercase tracking-wider text-app-muted mb-1">Przegenerowania</h3>
+              <ul class="font-mono text-[11px] flex flex-col gap-0.5">
+                @for (r of store.regens().slice().reverse(); track r.at) {
+                  <li><span class="text-warning">↻</span> {{ r.at | date: 'dd.MM HH:mm' }} · {{ r.kind === 'full' ? 'cały plan' : 'od W' + r.week }} · wynik {{ r.score }}</li>
+                }
+              </ul>
+            </div>
+          }
+        </div>
+        <div>
+          <h2 class="text-[11px] font-bold uppercase tracking-wider text-app-muted mb-2">Statystyki dla AI</h2>
+          <ul class="flex flex-col gap-1 text-[11px] text-app-muted">
+            @for (l of statsLines(); track $index) {
+              <li>{{ l }}</li>
+            }
+          </ul>
+          <p class="text-[10px] text-app-muted mt-2">Trafiają do <strong>prompt korekta</strong> razem ze zdarzeniami.</p>
+        </div>
+      </div>
+    }
+    @case ('log') {
+      <h2 class="text-[11px] font-bold uppercase tracking-wider text-app-muted mb-2">Logi dzienne</h2>
+      <table class="w-full text-[11px] font-mono mb-4">
+        <thead class="text-app-muted text-[10px] uppercase">
+          <tr><th class="text-left py-1">dzień</th><th class="text-left">makro</th><th class="text-left">waga</th><th class="text-left">sen</th><th class="text-left">cardio</th></tr>
+        </thead>
+        <tbody>
+          @for (d of dailyDesc(); track d.date) {
+            <tr class="border-t border-app-line/50">
+              <td class="py-1">{{ d.date.slice(5) }}</td>
+              <td>{{ d.makro ? d.makro.kcal + ' · ' + d.makro.protein + '/' + d.makro.carbs + '/' + d.makro.fat : '—' }}</td>
+              <td>{{ d.waga ?? '—' }}</td>
+              <td>{{ d.sen ? d.sen.h + ' h' + (d.sen.q ? ' · ' + d.sen.q + '/10' : '') : '—' }}</td>
+              <td>{{ d.cardio?.length ? d.cardio!.map(cardioText).join(', ') : '—' }}</td>
+            </tr>
+          } @empty {
+            <tr><td colspan="5" class="text-app-muted italic py-1">Brak — makro 2600 180 300 70 · waga 85.2 · sen 7 8 · cardio 40 z2 142</td></tr>
+          }
+        </tbody>
+      </table>
+      <h2 class="text-[11px] font-bold uppercase tracking-wider text-app-muted mb-2">Log serii</h2>
+      <ul class="text-xs font-mono flex flex-col gap-1">
+        @for (l of store.log().slice().reverse(); track l.at) {
+          <li class="flex justify-between gap-2"><span>W{{ l.week }} {{ l.lift }} {{ l.kg }}x{{ l.reps }}{{ l.rpe ? '@' + l.rpe : '' }}</span><span class="text-app-muted">e1RM {{ l.e1rm }} · {{ l.at | date: 'dd.MM HH:mm' }}</span></li>
+        } @empty {
+          <li class="text-app-muted italic">Brak wpisów — zaloguj squat 180x3@8</li>
+        }
+      </ul>
+    }
+    @case ('history') {
+      <h2 class="text-[11px] font-bold uppercase tracking-wider text-app-muted mb-2">Wersje planu</h2>
+      <ol class="text-xs font-mono flex flex-col gap-1">
+        <li class="text-brand-text">● dziś — {{ store.plan()?.meta?.goal }}</li>
+        @for (v of store.history().slice().reverse(); track v.at) {
+          <li class="text-app-muted">○ {{ v.at | date: 'dd.MM HH:mm' }} — {{ v.label }}</li>
+        } @empty {
+          <li class="text-app-muted italic">Brak wcześniejszych wersji.</li>
+        }
+      </ol>
+      @if (store.plan()?.meta?.notes?.length) {
+        <ul class="mt-3 text-[11px] text-app-muted list-disc pl-4">
+          @for (n of store.plan()!.meta.notes; track $index) {
+            <li>{{ n }}</li>
+          }
+        </ul>
+      }
+    }
+    @case ('help') {
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+        @for (g of commandGroups; track g.group) {
+          <div>
+            <h2 class="text-[11px] font-bold uppercase tracking-wider text-app-muted mb-1.5">{{ g.group }}</h2>
+            <ul class="flex flex-col gap-1">
+              @for (c of g.commands; track c.cmd) {
+                <li><span class="font-mono font-bold text-brand-text">{{ c.cmd }}</span> <span class="font-mono text-app-muted">{{ c.args }}</span><div class="text-[11px] text-app-muted">{{ c.desc }}</div></li>
+              }
+            </ul>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- ================= Tydzień (domyślnie) ================= -->
+    @default {
+      @if (ref(); as r) {
+        <div class="flex flex-wrap items-center gap-x-2 gap-y-1 mb-3">
+          <h2 class="text-sm font-semibold flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full shrink-0" [style.background]="r.micro.isDeload ? focusColors.deload : focusColors[r.meso.focus]"></span>
+            W{{ r.micro.week }} · {{ r.meso.name }}
+          </h2>
+          @if (weekHead(); as h) {
+            <span
+              class="text-[10px] font-mono px-1.5 py-0.5 rounded-full border"
+              [style.border-color]="r.micro.isDeload ? focusColors.deload : focusColors[r.meso.focus]"
+              [style.color]="r.micro.isDeload ? focusColors.deload : focusColors[r.meso.focus]"
+            >{{ h.phase }}</span>
+            <span class="font-mono text-[11px] text-app-muted">{{ h.range }}@if (h.label) { · {{ h.label }}}</span>
+          }
+        </div>
+        <!-- KPI tygodnia -->
+        <dl class="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-3">
+          @for (k of kpis(); track k.label) {
+            <div class="rounded-xl border border-app-line bg-app-bg px-2.5 py-2 min-w-0">
+              <dt class="text-[10px] font-bold uppercase tracking-wider text-app-muted">{{ k.label }}</dt>
+              <dd class="font-mono text-base font-bold leading-tight">{{ k.value }}</dd>
+              <dd class="text-[10px] text-app-muted truncate" [title]="k.hint">{{ k.hint }}</dd>
+            </div>
+          }
+        </dl>
+        <!-- 7 dni jako „commity" tygodnia -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+          @for (d of days(); track d.day) {
+            <div class="rounded-xl border p-2 min-h-[96px] flex flex-col gap-1.5" [class]="d.today ? 'border-brand' : 'border-app-line'">
+              <div class="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-app-muted">
+                <span [class.text-brand-text]="d.today">{{ d.label.slice(0, 3) }}</span>
+                @if (d.highCarb) {
+                  <span class="w-1.5 h-1.5 rounded-full bg-carb-high" title="Dzień high-carb"></span>
+                }
+              </div>
+              @for (x of d.sessions; track x.key) {
+                <button
+                  type="button"
+                  (click)="engine.openSession(x.key)"
+                  class="text-left rounded-lg px-2 py-1.5 border transition-colors hover:bg-app-hover"
+                  [class]="x.status === 'done' ? 'border-success-line bg-success-soft' : x.status === 'skipped' ? 'border-app-line opacity-50 line-through' : 'border-app-line'"
+                >
+                  <div class="text-[11px] font-semibold leading-tight">{{ x.s.name }}</div>
+                  @if (topSet(x.s); as t) {
+                    <div class="mt-1 text-[10px] leading-tight" [title]="'Top set: ' + t.exercise + ' ' + t.set">
+                      <span class="text-app-muted">{{ t.exercise }}</span>
+                      <span class="block font-mono font-bold text-app-text">{{ t.set }}</span>
+                    </div>
+                  }
+                  <div class="font-mono text-[10px] text-app-muted mt-0.5">{{ x.s.durationMin }} min · {{ x.s.main.length + x.s.accessories.length }} ćw.</div>
+                  @if (x.s.prehab.length) {
+                    <span class="inline-block mt-1 text-[9px] font-mono px-1 rounded bg-pain-mid/15 text-pain-mid">prehab</span>
+                  }
+                </button>
+              }
+              @for (c of d.cardio; track $index) {
+                <div class="rounded-lg px-2 py-1.5 border border-dashed border-app-line text-[10px] leading-tight flex gap-1.5" [title]="c.notes ?? ''">
+                  <span aria-hidden="true">{{ cardioIcon(c) }}</span>
+                  <span>
+                    <span class="font-semibold">{{ c.type }}</span>
+                    <span class="block font-mono text-app-muted">{{ c.minutes }}′@if (c.zone) { · {{ c.zone }}}</span>
+                  </span>
+                </div>
+              }
+              @if (!d.sessions.length && !d.cardio.length) {
+                <div class="text-[10px] text-app-empty-dim italic mt-auto">wolne</div>
+              }
+            </div>
+          }
+        </div>
+      }
+    }
+  }
+</div>

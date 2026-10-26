@@ -1,3 +1,5 @@
+> **Uwaga:** dokument z poprzedniej wersji aplikacji (karta klienta + backend). Aktualny kierunek: intake sportowy → AI → plan — patrz [DATA-FLOW.md](DATA-FLOW.md).
+
 # Założenia
 
 ## Cel i zakres

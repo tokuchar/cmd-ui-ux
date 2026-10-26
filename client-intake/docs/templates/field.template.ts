@@ -1,9 +1,9 @@
 // SZABLONY PÓL — wklej do tablicy `fields` kroku. Pełna lista opcji: docs/FIELD-TYPES.md.
 import { FieldDef } from '../../src/app/core/engine/field-def';
-import { Customer } from '../../src/app/core/models/customer.model';
+import { AthleteProfile } from '../../src/app/core/models/athlete.model';
 import { V } from '../../src/app/core/validation/validators';
 
-export const FIELD_EXAMPLES: FieldDef<Customer>[] = [
+export const FIELD_EXAMPLES: FieldDef<AthleteProfile>[] = [
   // Tekst z walidacją regex
   {
     id: '<pole>', type: 'text', label: 'NIP', placeholder: 'np. 5251234567',

@@ -1,17 +1,21 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { App } from './app';
 import { appConfig } from './app.config';
+import { routes } from './app.routes';
 
 describe('App', () => {
   beforeEach(async () => {
-    await TestBed.configureTestingModule({ imports: [App], providers: appConfig.providers }).compileComponents();
+    localStorage.clear();
+    await TestBed.configureTestingModule({ imports: [App], providers: [...appConfig.providers, provideRouter(routes)] }).compileComponents();
   });
 
-  it('renders the first step of the command line', async () => {
+  it('renders the section tabs', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('label[for="cmdInput"]')?.textContent).toContain('Imię i nazwisko');
-    expect(el.textContent).toContain('Krok 1 / 6');
+    expect(el.textContent).toContain('Intake');
+    expect(el.textContent).toContain('Profil');
+    expect(el.textContent).toContain('Plan');
   });
 });

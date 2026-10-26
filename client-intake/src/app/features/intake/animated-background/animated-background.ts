@@ -13,7 +13,7 @@ import {
 import { ThemeService } from '../../../core/services/theme.service';
 
 /** Tokeny kolorów, z których budujemy wielobarwną aurorę (odcienie marki/grup). */
-const COLOR_TOKENS = ['--bg-fx', '--group-2', '--group-4', '--group-6'];
+const COLOR_TOKENS = ['--bg-fx', '--bg-fx-2', '--bg-fx-3', '--bg-fx-4'];
 
 /** Jedna „plama" aurory — pozycja oscyluje sinusoidalnie wokół punktu bazowego. */
 interface Blob {
@@ -61,13 +61,14 @@ export class AnimatedBackground {
   private lastDraw = 0;
   private reduced = false;
 
-  // Stały układ plam (deterministyczny — spokojna, powtarzalna kompozycja).
+  // Układ plam skupiony przy górnej krawędzi (aurora tylko w górnej ~1/3).
+  // Przewaga zieleni (teal + zieleń morska), pomarańcz jako ciepły akcent.
   private readonly blobs: Blob[] = [
-    { color: 0, bx: 0.22, by: 0.3, ax: 0.1, ay: 0.08, px: 0.0, py: 1.1, sp: 0.09, r: 0.6 },
-    { color: 1, bx: 0.78, by: 0.28, ax: 0.09, ay: 0.1, px: 2.0, py: 0.4, sp: 0.07, r: 0.55 },
-    { color: 2, bx: 0.7, by: 0.75, ax: 0.12, ay: 0.09, px: 4.1, py: 3.0, sp: 0.08, r: 0.65 },
-    { color: 3, bx: 0.3, by: 0.72, ax: 0.1, ay: 0.11, px: 1.3, py: 5.2, sp: 0.06, r: 0.58 },
-    { color: 0, bx: 0.5, by: 0.5, ax: 0.14, ay: 0.1, px: 3.4, py: 2.2, sp: 0.05, r: 0.5 },
+    { color: 1, bx: 0.16, by: 0.06, ax: 0.08, ay: 0.05, px: 0.0, py: 1.1, sp: 0.09, r: 0.46 },
+    { color: 1, bx: 0.42, by: 0.16, ax: 0.1, ay: 0.07, px: 2.0, py: 0.4, sp: 0.07, r: 0.4 },
+    { color: 0, bx: 0.6, by: 0.05, ax: 0.08, ay: 0.05, px: 4.1, py: 3.0, sp: 0.08, r: 0.34 },
+    { color: 1, bx: 0.82, by: 0.22, ax: 0.09, ay: 0.07, px: 1.3, py: 5.2, sp: 0.06, r: 0.38 },
+    { color: 1, bx: 0.3, by: 0.3, ax: 0.11, ay: 0.06, px: 3.4, py: 2.2, sp: 0.05, r: 0.3 },
   ];
 
   constructor() {
@@ -199,6 +200,17 @@ export class AnimatedBackground {
     }
 
     ctx.filter = 'none';
+
+    // Maska skośna: aurora tylko przy górze, a dolna krawędź biegnie po przekątnej
+    // (wyżej z lewej, niżej z prawej) — nieregularny, organiczny pas.
+    ctx.globalCompositeOperation = 'destination-in';
+    const mask = ctx.createLinearGradient(w * 0.15, -h * 0.05, w * 0.85, h * 0.6);
+    mask.addColorStop(0, 'rgba(0, 0, 0, 1)');
+    mask.addColorStop(0.32, 'rgba(0, 0, 0, 1)');
+    mask.addColorStop(0.78, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = mask;
+    ctx.fillRect(0, 0, w, h);
+    ctx.globalCompositeOperation = 'source-over';
   }
 
   /** Reduced motion: pojedyncza statyczna klatka aurory (bez pętli). */

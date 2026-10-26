@@ -1,5 +1,27 @@
 # Przepływ danych
 
+## Całość: intake → profil → AI → plan
+
+```mermaid
+flowchart LR
+  I[Intake<br/>command line] --> P[(AthleteProfile<br/>localStorage)]
+  P --> D[Profil<br/>dane podstawowe]
+  D -- "Kopiuj prompt<br/>ai/prompt-builder.ts" --> AI[[AI — ręcznie]]
+  AI -- "JSON" --> V[plan.validator.ts<br/>błędy ze ścieżką]
+  V --> S[(PlanStore<br/>plan + wersje + logi)]
+  S --> G[Plan Graph<br/>git tree]
+  S --> C[Komendy planu<br/>plan-engine.ts]
+  C -- "prompt korekta" --> AI
+```
+
+- Profil zapisuje się automatycznie (`IntakeStore` → `athlete-profile-v1`), plan w `athlete-plan-v1`.
+- Odpowiedź AI może być pełnym planem albo patchem `{ "microcycles": [...] }` (korekta od tygodnia N).
+- Kontrakt JSON: [PLAN-SCHEMA.md](PLAN-SCHEMA.md), pytania: [SPORT-QUESTION-TREE.md](SPORT-QUESTION-TREE.md),
+  widok i komendy: [PLAN-VIEW.md](PLAN-VIEW.md).
+
+> Sekcje poniżej opisują silnik command line (wspólny z poprzednią wersją — karta klienta);
+> przykłady z `Customer` ilustrują mechanizm, model to teraz `AthleteProfile`.
+
 ## Jeden wpis w command line
 
 ```mermaid

@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, HostListener, inject } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { IntakeEngine } from '../../core/engine/intake-engine';
 import { ThemeService } from '../../core/services/theme.service';
 import { AnimatedBackground } from './animated-background/animated-background';
@@ -8,7 +9,7 @@ import { DataSheet } from './data-sheet/data-sheet';
 import { PipelineBar } from './pipeline-bar/pipeline-bar';
 import { ToastOutlet } from './toast-outlet/toast-outlet';
 
-/** Ekran „Zakładanie klienta" — układ 1:1 z mockupem. */
+/** Ekran „Intake" — ankieta zawodnika w command line (układ 1:1 z mockupem). */
 @Component({
   selector: 'app-intake-page',
   templateUrl: './intake-page.html',
@@ -21,10 +22,12 @@ export class IntakePage {
   protected readonly theme = inject(ThemeService);
 
   constructor() {
-    this.engine.start();
+    // /intake?keep=1 — przejście z edycji w zakładce Profil (kursor już ustawiony);
+    // inaczej wznowienie od pierwszego pytania bez odpowiedzi.
+    if (!inject(ActivatedRoute).snapshot.queryParamMap.has('keep')) this.engine.start();
   }
 
-  /** ⌘K / Ctrl+K komendy · ⌘F formularz · ⌘Q motyw · ⌘J „Dane klienta". */
+  /** ⌘K / Ctrl+K komendy · ⌘F formularz · ⌘Q motyw · ⌘J „Dane podstawowe". */
   @HostListener('document:keydown', ['$event'])
   protected onKeydown(e: KeyboardEvent): void {
     if (!(e.metaKey || e.ctrlKey)) return;

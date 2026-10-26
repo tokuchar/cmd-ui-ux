@@ -19,11 +19,13 @@ import {
   isAsked,
   isFieldComplete,
 } from './field-runtime';
-import { askedPositions, findCollectionStep, findField, FlowPosition, optionalGroups, stepNumber } from './flow';
+import { askedPositions, findCollectionStep, findField, firstOpenPosition, FlowPosition, optionalGroups, stepNumber } from './flow';
 import { getPath, parseItemPath, setPath } from './path';
-import { Customer } from '../models/customer.model';
+import { AthleteProfile } from '../models/athlete.model';
 import { CollectionDef, CollectionItem, EffectResult, HookContext } from './step-def';
 import { escapeHtml, normalize, plural } from './text';
+import { buildPlanPrompt } from '../ai/prompt-builder';
+import { copyText } from '../storage/clipboard';
 
 /** Co pokazuje command line (wyliczane z kursora i stanu). */
 export interface Prompt {
@@ -177,7 +179,7 @@ export class IntakeEngine {
         ...base,
         ...(field ? this.fieldPromptBits(field) : {}),
         label: field && cand ? `${field.label} — ${col.itemLabel(cand.item)}` : col.label,
-        counter: field ? `Osoba ${personNo}/${active.length} · ${field.label.toLowerCase()}` : counter,
+        counter: field ? `${col.itemNoun ?? 'Osoba'} ${personNo}/${active.length} · ${field.label.toLowerCase()}` : counter,
         placeholder: field?.placeholder ?? '',
       };
     }
@@ -186,7 +188,7 @@ export class IntakeEngine {
     const status = this.s.validation();
     const issues = this.s.issues().length;
     if (status === 'pending') {
-      return { ...base, label: 'Weryfikacja karty', counter: '…', placeholder: 'Trwa walidacja karty w usłudze…', disabled: true, showBack: false };
+      return { ...base, label: 'Sprawdzanie profilu', counter: '…', placeholder: 'Trwa sprawdzanie spójności profilu…', disabled: true, showBack: false };
     }
     if (status === 'invalid') {
       return { ...base, label: 'Do poprawy', counter: `${issues} do poprawy`, placeholder: 'Enter — popraw pola po kolei', primary: 'Popraw ›' };
@@ -198,7 +200,7 @@ export class IntakeEngine {
       ...base,
       label: 'Zakończono',
       counter: 'Gotowe',
-      placeholder: 'Dane kompletne — ⌘K i „od nowa", aby zacząć ponownie',
+      placeholder: 'Profil kompletny — ⌘K: prompt, podsumowanie, od nowa',
       disabled: true,
     };
   });
@@ -287,8 +289,13 @@ export class IntakeEngine {
    *  Start / restart
    * ============================================================ */
 
+  /** Start / powrót na ekran: pierwsze pytanie bez odpowiedzi (profil wznowiony z localStorage). */
   start(): void {
-    this.runPrefill(() => this.enterPosition(askedPositions(this.flow, this.s.model())[0]));
+    this.runPrefill(() => {
+      const open = firstOpenPosition(this.flow, this.s.model(), this.dict);
+      if (open) this.enterPosition(open);
+      else this.showDone();
+    });
   }
 
   /** Wstępne wczytanie danych z usługi (raz na start/„od nowa") → potem normalne wejście. */
@@ -299,7 +306,7 @@ export class IntakeEngine {
     }
     this.prefilled = true;
     this.s.busy.set(true);
-    this.setEcho('⏳ Wczytuję dane klienta…');
+    this.setEcho('⏳ Wczytuję dane…');
     this.flow.prefill(this.hookCtx()).subscribe({
       next: (res) => {
         this.s.busy.set(false);
@@ -312,6 +319,19 @@ export class IntakeEngine {
         then();
       },
     });
+  }
+
+  /** Import profilu z pliku JSON (zakładka Profil) — uzupełnia brakujące pola wartościami pustymi. */
+  loadProfile(profile: Partial<AthleteProfile>): void {
+    this.validationRun++;
+    this.hookSnapshots.clear();
+    this.s.model.set(applyComputed(this.flow, { ...this.flow.emptyModel(), ...profile }));
+    this.s.collections.set({});
+    this.s.issues.set([]);
+    this.s.validation.set('idle');
+    this.s.reachedEnd.set(false);
+    this.s.editMode.set('flow');
+    this.toast.show(`✓ Wczytano profil: ${this.flow.title(this.s.model())}`);
   }
 
   restart(): void {
@@ -330,7 +350,7 @@ export class IntakeEngine {
     this.s.busy.set(false);
     this.s.selectedGroup.set(null);
     this.start();
-    this.toast.show('↺ Wyczyszczono kartę klienta');
+    this.toast.show('↺ Wyczyszczono profil');
   }
 
   /* ============================================================
@@ -501,7 +521,7 @@ export class IntakeEngine {
     switch (cmd?.action.type) {
       case 'summary':
         this.openSheet();
-        this.setEcho('📋 Podsumowanie — rozwinięto „Dane klienta" na dole.', 'success');
+        this.setEcho('📋 Podsumowanie — rozwinięto „Dane podstawowe" na dole.', 'success');
         return;
       case 'validate':
         this.s.mode.set('form');
@@ -513,9 +533,23 @@ export class IntakeEngine {
       case 'restart':
         this.restart();
         return;
+      case 'prompt':
+        this.copyPrompt();
+        return;
     }
     this.fail(
       'Nieznana komenda. Dostępne: ' + this.cfg.commands.map((c) => `<strong>${c.cmd}</strong>`).join(', ') + '.',
+    );
+  }
+
+  /** Prompt dla AI (profil + schemat planu) → schowek. */
+  copyPrompt(): void {
+    const text = buildPlanPrompt(this.flow, this.s.model(), this.dict);
+    copyText(text).then(
+      (ok) =>
+        ok
+          ? this.setEcho(`📋 Skopiowano prompt (${text.length} znaków). Wklej go do AI, a odpowiedź JSON wklej w zakładce <strong>Plan</strong>.`, 'success')
+          : this.fail('Nie udało się skopiować — użyj przycisku „Kopiuj prompt" w zakładce Profil.'),
     );
   }
 
@@ -590,13 +624,13 @@ export class IntakeEngine {
   }
 
   /** Wspólne dla pól klienta i osób: prefill + echo (komunikat z walidacji ma pierwszeństwo). */
-  private showField(field: FieldDef, model: Customer | CollectionItem, issueKey: string): void {
+  private showField(field: FieldDef, model: AthleteProfile | CollectionItem, issueKey: string): void {
     this.clearError();
     const pre = fieldPrefill(field, model, this.dict);
     this.s.draft.set(pre.value);
     const issue = this.issueMap().get(issueKey);
     if (issue) {
-      this.setEcho(`<strong>Usługa walidacji:</strong> ${issue.map(escapeHtml).join(' ')}`, 'warning');
+      this.setEcho(`<strong>Do sprawdzenia:</strong> ${issue.map(escapeHtml).join(' ')}`, 'warning');
     } else {
       const suffix = pre.suggested ? ' <span class="text-app-muted">· podpowiedź — Enter zatwierdza</span>' : '';
       this.setEcho(fieldHint(field, model) + suffix);
@@ -669,8 +703,9 @@ export class IntakeEngine {
         this.setEcho(`Brak osób dla kodu <strong>${escapeHtml(st.code)}</strong> — wpisz inny kod.`, 'warning');
       } else {
         this.setEcho(
-          'Wyszarz przyciskiem ✕ osoby, których nie chcesz (lub wpisz <strong>-2</strong> / <strong>+2</strong>). ' +
-            'Następnie kliknij <strong>✓ Zatwierdź wszystkie</strong> albo naciśnij <strong>Enter</strong> — zapytam o każdą po kolei.',
+          col.selectHint ??
+            'Wyszarz przyciskiem ✕ osoby, których nie chcesz (lub wpisz <strong>-2</strong> / <strong>+2</strong>). ' +
+              'Następnie kliknij <strong>✓ Zatwierdź wszystkie</strong> albo naciśnij <strong>Enter</strong> — zapytam o każdą po kolei.',
         );
       }
     } else {
@@ -697,7 +732,7 @@ export class IntakeEngine {
       if (toggle) {
         const cand = st.candidates[Number(toggle[2]) - 1];
         if (!cand) {
-          this.fail(`Nie ma osoby nr ${escapeHtml(toggle[2])}.`);
+          this.fail(`Nie ma pozycji nr ${escapeHtml(toggle[2])}.`);
           return;
         }
         if (cand.excluded !== (toggle[1] === '-')) this.toggleExclude(step, cand.id);
@@ -733,6 +768,10 @@ export class IntakeEngine {
           done: false,
         }));
         this.patchCollection(step, { phase: 'select', candidates });
+        if (!candidates.length && col.allowEmpty) {
+          this.finishCollection(step);
+          return;
+        }
         if (this.s.cursor().kind === 'collection') this.renderCollection(step);
       },
       error: () => {
@@ -823,7 +862,7 @@ export class IntakeEngine {
     this.s.validation.set('pending');
     this.s.draft.set('');
     this.clearError();
-    this.setEcho('⏳ Weryfikuję kartę klienta w usłudze walidacji…');
+    this.setEcho('⏳ Sprawdzam spójność profilu…');
     this.runGroupHooks()
       .pipe(switchMap(() => this.flow.validateCard(this.s.model(), this.hookCtx())))
       .subscribe({
@@ -831,7 +870,7 @@ export class IntakeEngine {
           if (run !== this.validationRun) return;
           this.s.issues.set(issues);
           this.s.validation.set(issues.length ? 'invalid' : 'valid');
-          if (!issues.length) this.toast.show(`✓ Zapisano klienta: ${this.flow.title(this.s.model())}`);
+          if (!issues.length) this.toast.show(`✓ Zapisano profil: ${this.flow.title(this.s.model())}`);
           if (this.s.cursor().kind === 'done') this.showDone();
         },
         error: () => {
@@ -854,10 +893,10 @@ export class IntakeEngine {
     this.clearError();
     const status = this.s.validation();
     if (status === 'pending') {
-      this.setEcho('⏳ Weryfikuję kartę klienta w usłudze walidacji…');
+      this.setEcho('⏳ Sprawdzam spójność profilu…');
     } else if (status === 'valid') {
       this.setEcho(
-        '🎉 Wszystkie dane zostały wprowadzone poprawnie i zweryfikowane. Możesz cofnąć się lub kliknąć dwukrotnie pole w „Dane klienta", aby poprawić dane.',
+        '🎉 Profil kompletny. Przejdź do zakładki <strong>Profil</strong>, aby skopiować prompt dla AI, albo kliknij dwukrotnie pole w „Dane podstawowe", aby je poprawić.',
         'success',
       );
     } else if (status === 'error') {
@@ -868,9 +907,9 @@ export class IntakeEngine {
         .map((i) => `<li>• <strong>${escapeHtml(this.issueLabel(i.fieldId))}</strong> — ${escapeHtml(i.message)}</li>`)
         .join('');
       this.setEcho(
-        `Usługa walidacji zgłosiła <strong>${issues.length}</strong> ${plural(issues.length, 'problem', 'problemy', 'problemów')}:` +
+        `Sprawdzenie profilu zgłosiło <strong>${issues.length}</strong> ${plural(issues.length, 'problem', 'problemy', 'problemów')}:` +
           `<ul class="my-1 space-y-0.5">${list}</ul>` +
-          'Naciśnij <strong>Enter</strong>, aby poprawić po kolei, albo kliknij dwukrotnie pole w „Dane klienta".',
+          'Naciśnij <strong>Enter</strong>, aby poprawić po kolei, albo kliknij dwukrotnie pole w „Dane podstawowe".',
         'warning',
       );
     }
@@ -1007,7 +1046,7 @@ export class IntakeEngine {
     return runs.length ? forkJoin(runs).pipe(map(() => undefined)) : of(undefined);
   }
 
-  private groupSnapshot(groupId: string, model: Customer): string {
+  private groupSnapshot(groupId: string, model: AthleteProfile): string {
     return JSON.stringify(
       this.flow.steps
         .filter((s) => s.group === groupId && !s.collection)
@@ -1050,7 +1089,7 @@ export class IntakeEngine {
    * ============================================================ */
 
   /** Parse + walidatory sync, potem async (jeśli są) → onOk(wartość). */
-  private commit(field: FieldDef, raw: string, model: Customer | CollectionItem, onOk: (value: unknown) => void): void {
+  private commit(field: FieldDef, raw: string, model: AthleteProfile | CollectionItem, onOk: (value: unknown) => void): void {
     const res = evaluateField(field, raw, model, this.dict);
     if (!res.ok) {
       this.fail(res.reason);
@@ -1089,7 +1128,7 @@ export class IntakeEngine {
     return { field, options: fieldOptions(field, this.dict), allowCustom: !!field.allowCustom };
   }
 
-  private setModel(model: Customer): void {
+  private setModel(model: AthleteProfile): void {
     this.s.model.set(applyComputed(this.flow, model));
   }
 
@@ -1107,7 +1146,7 @@ export class IntakeEngine {
     this.s.focusTick.update((t) => ({ n: t.n + 1, select }));
   }
 
-  private hookCtx(): HookContext<Customer> {
+  private hookCtx(): HookContext<AthleteProfile> {
     return {
       model: this.s.model(),
       api: this.api,
@@ -1121,7 +1160,7 @@ export class IntakeEngine {
    * `groupId` podany (onComplete) → issues zastępują poprzedni zestaw tej grupy; w innym razie
    * (prefill/onCommit) → issues dołączane bez duplikatów. String traktowany jak sam toast.
    */
-  private applyEffectResult(res: EffectResult<Customer> | string | void, groupId?: string): void {
+  private applyEffectResult(res: EffectResult<AthleteProfile> | string | void, groupId?: string): void {
     if (!res) return;
     if (typeof res === 'string') {
       this.toast.show(res);
@@ -1178,19 +1217,21 @@ export class IntakeEngine {
     return this.collectionItems(col).findIndex((i) => i.id === id);
   }
 
-  private collectionRows(step: number, col: CollectionDef, model: Customer, issues: Map<string, string[]>): SheetRow[] {
+  private collectionRows(step: number, col: CollectionDef, model: AthleteProfile, issues: Map<string, string[]>): SheetRow[] {
     const items = this.collectionItems(col);
     const ownIssue = issues.get(col.target)?.join(' ') ?? null;
     const itemIssues = items.map((_, i) =>
       [...issues.entries()].filter(([k]) => k.startsWith(`${col.target}[${i}].`)).flatMap(([, v]) => v),
     );
     const anyItemIssue = itemIssues.some((l) => l.length);
+    // Pusta lista odpowiedziana („brak") ≠ jeszcze nie pytano (null).
+    const answeredEmpty = !items.length && !!col.allowEmpty && Array.isArray(getPath(model, col.target));
     const rows: SheetRow[] = [
       {
         key: col.target,
         label: col.sheetLabel,
-        value: items.length ? col.summary(items) : '',
-        status: ownIssue || anyItemIssue ? 'bad' : items.length ? 'ok' : 'empty',
+        value: items.length ? col.summary(items) : answeredEmpty ? 'brak' : '',
+        status: ownIssue || anyItemIssue ? 'bad' : items.length || answeredEmpty ? 'ok' : 'empty',
         issue: ownIssue,
         sub: false,
         edit: () => this.editCollection(step),

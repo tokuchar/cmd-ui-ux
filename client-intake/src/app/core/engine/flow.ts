@@ -20,6 +20,14 @@ export function askedPositions<M>(flow: FlowDef<M>, model: M): FlowPosition[] {
   return out;
 }
 
+/** Pierwsza pozycja bez odpowiedzi (wznowienie zapisanego profilu); undefined = wszystko odpowiedziane. */
+export function firstOpenPosition<M>(flow: FlowDef<M>, model: M, ctx: TypeContext): FlowPosition | undefined {
+  return askedPositions(flow, model).find((p) => {
+    const step = flow.steps[p.step];
+    return step.collection ? !collectionDone(step, model) : !isFieldComplete(step.fields[p.field], model, ctx);
+  });
+}
+
 /** Kroki, które mają cokolwiek do zapytania — podstawa licznika „Krok N / M". */
 export function visibleSteps<M>(flow: FlowDef<M>, model: M): number[] {
   return [...new Set(askedPositions(flow, model).map((p) => p.step))];
@@ -37,7 +45,7 @@ function counts<M>(field: FieldDef<M>, model: M): boolean {
 
 function collectionDone<M>(step: StepDef<M>, model: M): boolean {
   const items = getPath(model, step.collection!.target);
-  return Array.isArray(items) && items.length > 0;
+  return Array.isArray(items) && (items.length > 0 || !!step.collection!.allowEmpty);
 }
 
 /** % kompletności każdej grupy (pipeline). */

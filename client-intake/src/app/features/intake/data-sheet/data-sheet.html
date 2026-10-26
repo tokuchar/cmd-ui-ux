@@ -46,7 +46,7 @@
                     @if (row.value) {
                       <span class="font-mono text-xs font-semibold truncate text-app-text" [title]="row.value">{{ row.value }}</span>
                     } @else {
-                      <span class="font-mono text-xs truncate text-app-empty italic">{{ row.key === 'polecajacy' ? 'Brak' : 'Nie podano' }}</span>
+                      <span class="font-mono text-xs truncate text-app-empty italic">Nie podano</span>
                     }
                     <span class="font-mono shrink-0">
                       @switch (row.status) {
@@ -72,7 +72,7 @@
         }
         @if (engine.generalIssues().length) {
           <div class="pb-3">
-            <div class="text-[10px] font-bold uppercase tracking-wider text-danger-text pt-3 pb-1">Uwagi do karty</div>
+            <div class="text-[10px] font-bold uppercase tracking-wider text-danger-text pt-3 pb-1">Uwagi do profilu</div>
             @for (i of engine.generalIssues(); track i.message) {
               <div class="text-[11px] text-danger-text py-0.5">⚠ {{ i.message }}</div>
             }
@@ -84,7 +84,7 @@
     <!-- Always-visible handle -->
     <div
       (click)="toggle()"
-      title="Dane klienta (⌘J)"
+      title="Dane podstawowe (⌘J)"
       class="bg-app-surface border border-app-line px-4 py-2.5 flex items-center justify-between cursor-pointer select-none hover:bg-app-hover transition-colors"
       [class.rounded-t-2xl]="!s.sheetOpen()"
       [class.shadow-lg]="!s.sheetOpen()"
@@ -93,7 +93,7 @@
       <h2 class="text-xs font-bold uppercase tracking-wider text-app-muted flex items-center gap-2">
         <span class="text-[11px] w-3 inline-block">{{ s.sheetOpen() ? '▾' : '▴' }}</span>
         <span class="w-2 h-2 rounded-full bg-brand inline-block"></span>
-        Dane klienta
+        Dane podstawowe
         @if (s.issues().length) {
           <span class="font-mono normal-case font-normal text-danger-text">· {{ s.issues().length }} do poprawy</span>
         }

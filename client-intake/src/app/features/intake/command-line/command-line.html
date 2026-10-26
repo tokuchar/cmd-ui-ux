@@ -131,8 +131,8 @@
           [attr.data-active]="i === activeOption() ? '' : null"
         >
           <span class="flex items-center gap-2">
-            <span class="w-3 inline-block" [class.opacity-0]="i !== activeOption()">
-              <span class="text-brand-text font-bold">✓</span>
+            <span class="w-3 inline-block" [class.opacity-0]="i !== activeOption() && !row.chosen">
+              <span class="text-brand-text font-bold">{{ row.chosen ? '●' : '✓' }}</span>
             </span>
             {{ row.entry.label }}
           </span>

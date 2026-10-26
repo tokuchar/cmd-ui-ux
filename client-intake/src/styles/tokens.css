@@ -39,7 +39,10 @@
   --row-hover: rgb(91 91 214 / 0.08);     /* wiersz edytowalny w „Dane klienta" */
   --row-highlight: rgb(91 91 214 / 0.1);  /* podświetlenie grupy po kliknięciu w pipeline */
   --bg-image-opacity: 0.045;              /* zdjęcie w tle: subtelne w trybie jasnym (wypełnia pustkę) */
-  --bg-fx: #5b5bd6;                        /* animowane tło „digital rain" — odcień marki */
+  --bg-fx: #16a3a0;                        /* animowane tło (aurora) — teal */
+  --bg-fx-2: #2ba98e;                      /* zieleń morska */
+  --bg-fx-3: #e0504f;                      /* czerwień */
+  --bg-fx-4: #f0953a;                      /* pomarańcz */
   --bg-fx-opacity: 0.11;                   /* krycie całości efektu */
 
   /* --- Statusy ------------------------------------------------------------ */
@@ -56,12 +59,30 @@
   --warning: #f59e0b;          /* ⚠ */
 
   /* --- Sekcje pipeline (kolejność = kolejność grup w flow.config.ts) ------ */
-  --group-1: #5b5bd6;          /* Dane podstawowe */
-  --group-2: #0d9488;          /* Adresy */
-  --group-3: #d97706;          /* Osoby polecające */
-  --group-4: #db2777;          /* Dane dodatkowe (demo) */
-  --group-5: #2563eb;          /* zapas dla migrowanej aplikacji */
-  --group-6: #7c3aed;
+  --group-1: #5b5bd6;          /* Profil */
+  --group-2: #0d9488;          /* Cele */
+  --group-3: #d97706;          /* Siła */
+  --group-4: #db2777;          /* Czas i sprzęt */
+  --group-5: #2563eb;          /* Regeneracja */
+  --group-6: #7c3aed;          /* Odżywianie */
+  --group-7: #dc2626;          /* Kontuzje */
+  --group-8: #4d7c0f;          /* Preferencje */
+
+  /* --- Fazy planu (graf makrocyklu, kolor = focus mezocyklu) -------------- */
+  --phase-accum: #0d9488;      /* akumulacja (objętość) */
+  --phase-intens: #d97706;     /* intensyfikacja */
+  --phase-real: #dc2626;       /* realizacja / peak */
+  --phase-deload: #8a8a96;     /* deload */
+  --phase-taper: #7c3aed;      /* taper przed startem */
+  --phase-hyper: #2563eb;      /* hipertrofia (powerbuilding) */
+  --phase-main: #5b5bd6;       /* gałąź główna (makrocykl) */
+  --phase-side: #db2777;       /* cele dodatkowe (gałęzie równoległe) */
+  --carb-high: #f59e0b;        /* dzień z większą ilością węglowodanów */
+
+  /* --- Skala bólu 0–10 (mapa kontuzji) ------------------------------------ */
+  --pain-low: #10b981;
+  --pain-mid: #f59e0b;
+  --pain-high: #e11d48;
 
   /* --- Scrollbar ---------------------------------------------------------- */
   --scrollbar: rgb(138 138 148 / 0.3);
@@ -93,7 +114,10 @@
   --row-hover: rgb(139 139 245 / 0.12);
   --row-highlight: rgb(139 139 245 / 0.14);
   --bg-image-opacity: 0.06;
-  --bg-fx: #7c7cf0;
+  --bg-fx: #22c2b8;                        /* aurora — teal (jaśniej w ciemnym) */
+  --bg-fx-2: #37c08a;                      /* zieleń morska */
+  --bg-fx-3: #f26a6a;                      /* czerwień */
+  --bg-fx-4: #ffb04d;                      /* pomarańcz */
   --bg-fx-opacity: 0.16;
 
   --success: #10b981;
@@ -114,6 +138,22 @@
   --group-4: #f472b6;
   --group-5: #60a5fa;
   --group-6: #a78bfa;
+  --group-7: #f87171;
+  --group-8: #a3e635;
+
+  --phase-accum: #2dd4bf;
+  --phase-intens: #fbbf24;
+  --phase-real: #f87171;
+  --phase-deload: #6b6b75;
+  --phase-taper: #a78bfa;
+  --phase-hyper: #60a5fa;
+  --phase-main: #8b8bf5;
+  --phase-side: #f472b6;
+  --carb-high: #fbbf24;
+
+  --pain-low: #34d399;
+  --pain-mid: #fbbf24;
+  --pain-high: #fb7185;
 
   color-scheme: dark;
 }

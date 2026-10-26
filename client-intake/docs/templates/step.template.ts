@@ -1,16 +1,16 @@
 // SZABLON KROKU — skopiuj do src/app/core/config/steps/<grupa>.steps.ts,
 // zamień <…>, dodaj krok do STEPS w flow.config.ts i wiersze do docs/STEPS.md.
 import { StepDef } from '../../engine/step-def';
-import { Customer } from '../../models/customer.model';
+import { AthleteProfile } from '../../models/athlete.model';
 import { V } from '../../validation/validators';
 
-export const <NAZWA>_STEP: StepDef<Customer> = {
+export const <NAZWA>_STEP: StepDef<AthleteProfile> = {
   id: '<id-kroku>',
   group: '<id-grupy z GROUPS>',
   fields: [
     {
-      id: '<pole w Customer>',
-      type: 'text', // text | phone | email | address | date | number | select | boolean
+      id: '<pole w AthleteProfile>',
+      type: 'text', // text | number | date | select | multiselect | scale | lift | boolean | …
       label: '<Nagłówek nad command line>',
       sheetLabel: '<Etykieta w „Dane klienta">',
       placeholder: 'np. <przykład>',

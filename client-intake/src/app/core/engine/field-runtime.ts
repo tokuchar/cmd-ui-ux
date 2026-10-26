@@ -25,7 +25,7 @@ export function fieldPrefill<M>(
   if (suggestion) return { value: suggestion, suggested: true };
   const fallback = field.defaultValue?.(model);
   if (fallback) return { value: fallback, suggested: false };
-  if (field.preselect !== false) {
+  if (field.preselect !== false && field.type !== 'multiselect') {
     const first = fieldOptions(field, ctx)[0];
     if (first) return { value: first.label, suggested: false };
   }
@@ -48,7 +48,7 @@ export function fieldOptions<M>(field: FieldDef<M>, ctx: TypeContext): DictEntry
 export function evaluateField<M>(field: FieldDef<M>, raw: string, model: M, ctx: TypeContext): ParseResult {
   const required = field.required !== false;
   if (raw.trim() === '') {
-    if (!required) return { ok: true, value: field.type === 'boolean' ? null : '' };
+    if (!required) return { ok: true, value: field.type === 'boolean' ? null : field.type === 'multiselect' ? [] : '' };
     if (field.requiredMessage) return { ok: false, reason: field.requiredMessage };
   }
   const parsed = FIELD_TYPES[field.type].parse(raw, field, ctx);
@@ -82,8 +82,13 @@ export function isAsked<M>(field: FieldDef<M>, model: M): boolean {
 export function isFieldComplete<M>(field: FieldDef<M>, model: M, ctx: TypeContext): boolean {
   if (isComputed(field, model)) return !isEmptyValue(field.compute!(model));
   const raw = fieldInput(field, model, ctx);
-  if (!raw) return false;
+  // Pole opcjonalne pominięte pustym wpisem ('' / []) jest odpowiedziane; null = jeszcze nie pytano.
+  if (!raw) return field.required === false && !field.input && answered(getPath(model, field.id));
   return evaluateField(field, raw, model, ctx).ok;
+}
+
+function answered(v: unknown): boolean {
+  return v !== null && v !== undefined;
 }
 
 /** Przelicza wszystkie pola wyliczane (`compute`) — wołane po każdej zmianie modelu. */
